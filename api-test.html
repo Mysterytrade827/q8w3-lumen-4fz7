@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Broker API test</title>
+<style>
+:root{--bg:#fff;--fg:#111;--mut:#666;--bd:#ccc;--ok:#0a7a2f;--bad:#b00020;--pre:#f3f3f3}
+@media (prefers-color-scheme:dark){:root{--bg:#121212;--fg:#eee;--mut:#999;--bd:#444;--ok:#4cd27a;--bad:#ff6b81;--pre:#1e1e1e}}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--fg);margin:0;padding:14px;max-width:640px}
+h2{margin:18px 0 6px;font-size:18px}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 2px}
+input{width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--fg);font-size:15px}
+button{margin-top:10px;padding:10px 16px;font-size:15px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--fg)}
+.v{margin-top:10px;font-weight:600}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+pre{background:var(--pre);padding:8px;border-radius:6px;white-space:pre-wrap;word-break:break-all;font-size:12px;max-height:260px;overflow:auto}
+p.n{font-size:13px;color:var(--mut)}
+</style>
+</head>
+<body>
+<h1 style="font-size:20px;margin:0">Broker API test</h1>
+<p class="n">Tests whether your browser can call each broker directly. Keys are saved only in this browser. Open this page from your own GitHub Pages link, not from a claude.ai link, which blocks outside requests.</p>
+
+<h2>Fyers</h2>
+<label for="fa">App ID (like ABC123XYZ-100)</label><input id="fa" autocomplete="off">
+<label for="ft">Access token (today's)</label><input id="ft" autocomplete="off">
+<button id="fb">Test Fyers (Nifty chain)</button>
+<div class="v" id="fv"></div><pre id="fo"></pre>
+
+<h2>Dhan</h2>
+<label for="dc">Client ID</label><input id="dc" autocomplete="off">
+<label for="dt">Access token (today's)</label><input id="dt" autocomplete="off">
+<button id="db">Test Dhan (Nifty expiries + chain)</button>
+<div class="v" id="dv"></div><pre id="do"></pre>
+
+<script>
+var IDS=["fa","ft","dc","dt"];
+IDS.forEach(function(i){var e=document.getElementById(i);try{e.value=localStorage.getItem("bt_"+i)||""}catch(x){}
+e.addEventListener("input",function(){try{localStorage.setItem("bt_"+i,e.value.trim())}catch(x){}})});
+function val(i){return document.getElementById(i).value.trim()}
+function show(vid,oid,ok,msg,body){var v=document.getElementById(vid);v.className="v "+(ok?"ok":"bad");v.textContent=msg;
+document.getElementById(oid).textContent=body==null?"":String(body).slice(0,1500)}
+function verdict(e){
+  if(e instanceof TypeError)return "BLOCKED: browser could not reach the API (usually CORS, or no internet). You need a proxy.";
+  return "Error: "+e.message}
+
+document.getElementById("fb").onclick=function(){
+  if(!val("fa")||!val("ft")){show("fv","fo",false,"Enter App ID and token","");return}
+  show("fv","fo",true,"Calling...","");
+  var u="https://api-t1.fyers.in/data/options-chain-v3?symbol="+encodeURIComponent("NSE:NIFTY50-INDEX")+"&strikecount=3";
+  fetch(u,{headers:{"Authorization":val("fa")+":"+val("ft")}}).then(function(r){
+    return r.text().then(function(t){
+      var reach="CORS OK (the browser got a reply, HTTP "+r.status+"). ";
+      var j=null;try{j=JSON.parse(t)}catch(x){}
+      if(r.ok&&j&&j.s==="ok")show("fv","fo",true,reach+"Data received. Fyers works directly.",t);
+      else show("fv","fo",false,reach+"But the broker rejected it (check token or app ID). Not a CORS problem.",t)})
+  }).catch(function(e){show("fv","fo",false,verdict(e),e.message)})
+};
+
+document.getElementById("db").onclick=function(){
+  if(!val("dc")||!val("dt")){show("dv","do",false,"Enter Client ID and token","");return}
+  show("dv","do",true,"Calling...","");
+  var h={"access-token":val("dt"),"client-id":val("dc"),"Content-Type":"application/json"};
+  fetch("https://api.dhan.co/v2/optionchain/expirylist",{method:"POST",headers:h,body:JSON.stringify({UnderlyingScrip:13,UnderlyingSeg:"IDX_I"})})
+  .then(function(r){return r.text().then(function(t){
+    var reach="CORS OK (HTTP "+r.status+"). ";
+    var j=null;try{j=JSON.parse(t)}catch(x){}
+    var ex=j&&j.data&&j.data[0];
+    if(!r.ok||!ex){show("dv","do",false,reach+"But the broker rejected it (token, client ID, or Data API plan). Not a CORS problem.",t);return}
+    return fetch("https://api.dhan.co/v2/optionchain",{method:"POST",headers:h,body:JSON.stringify({UnderlyingScrip:13,UnderlyingSeg:"IDX_I",Expiry:ex})})
+      .then(function(r2){return r2.text().then(function(t2){
+        show("dv","do",r2.ok,reach+(r2.ok?"Chain received for "+ex+". Dhan works directly.":"Expiry list worked but chain failed (HTTP "+r2.status+"). Note Dhan allows about 1 chain request per 3 seconds."),t2)})})
+  })}).catch(function(e){show("dv","do",false,verdict(e),e.message)})
+};
+</script>
+</body>
+</html>
