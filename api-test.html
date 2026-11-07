@@ -25,6 +25,10 @@ p.n{font-size:13px;color:var(--mut)}
 <h2>Fyers</h2>
 <label for="fa">App ID (like ABC123XYZ-100)</label><input id="fa" autocomplete="off">
 <label for="ft">Access token (today's)</label><input id="ft" autocomplete="off">
+<label for="fs">Secret ID (only needed to log in; wiped after login)</label><input id="fs" type="password" autocomplete="off">
+<label for="fr">Redirect URL (must match the app exactly)</label><input id="fr" autocomplete="off">
+<button id="fl">Log in to Fyers and get token</button>
+<div class="v" id="flv"></div>
 <button id="fb">Test Fyers (Nifty chain)</button>
 <div class="v" id="fv"></div><pre id="fo"></pre>
 
@@ -35,9 +39,38 @@ p.n{font-size:13px;color:var(--mut)}
 <div class="v" id="dv"></div><pre id="do"></pre>
 
 <script>
-var IDS=["fa","ft","dc","dt"];
+var IDS=["fa","ft","fs","fr","dc","dt"];
 IDS.forEach(function(i){var e=document.getElementById(i);try{e.value=localStorage.getItem("bt_"+i)||""}catch(x){}
 e.addEventListener("input",function(){try{localStorage.setItem("bt_"+i,e.value.trim())}catch(x){}})});
+(function(){var r=document.getElementById("fr");if(!r.value)r.value=location.origin+location.pathname})();
+function sha256hex(s){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(b){
+  return Array.prototype.map.call(new Uint8Array(b),function(x){return ("0"+x.toString(16)).slice(-2)}).join("")})}
+document.getElementById("fl").onclick=function(){
+  if(!val("fa")||!val("fs")||!val("fr")){show("flv","fo",false,"Enter App ID, Secret and Redirect URL","");return}
+  var st=Math.random().toString(36).slice(2);
+  try{localStorage.setItem("bt_state",st)}catch(x){}
+  location.href="https://api-t1.fyers.in/api/v3/generate-authcode?client_id="+encodeURIComponent(val("fa"))+
+    "&redirect_uri="+encodeURIComponent(val("fr"))+"&response_type=code&state="+st};
+(function(){
+  var q=new URLSearchParams(location.search),code=q.get("auth_code");
+  if(!code)return;
+  var okState=q.get("state")===localStorage.getItem("bt_state");
+  history.replaceState(null,"",location.pathname);
+  if(!okState){show("flv","fo",false,"Login state did not match. Start the login again.","");return}
+  show("flv","fo",true,"Got login code, exchanging for token...","");
+  sha256hex(val("fa")+":"+val("fs")).then(function(h){
+    return fetch("https://api-t1.fyers.in/api/v3/validate-authcode",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({grant_type:"authorization_code",appIdHash:h,code:code})})})
+  .then(function(r){return r.text().then(function(t){
+    var j=null;try{j=JSON.parse(t)}catch(x){}
+    if(j&&j.access_token){
+      var e=document.getElementById("ft");e.value=j.access_token;
+      try{localStorage.setItem("bt_ft",j.access_token);localStorage.removeItem("bt_fs")}catch(x){}
+      document.getElementById("fs").value="";
+      show("flv","fo",true,"Token saved (valid until about 6:30 AM tomorrow). Secret wiped. Now tap Test Fyers.","")}
+    else show("flv","fo",false,"CORS OK (HTTP "+r.status+") but no token. Check Secret ID and that the redirect matches.",t)})})
+  .catch(function(e){show("flv","fo",false,verdict(e),e.message)})
+})();
 function val(i){return document.getElementById(i).value.trim()}
 function show(vid,oid,ok,msg,body){var v=document.getElementById(vid);v.className="v "+(ok?"ok":"bad");v.textContent=msg;
 document.getElementById(oid).textContent=body==null?"":String(body).slice(0,1500)}
