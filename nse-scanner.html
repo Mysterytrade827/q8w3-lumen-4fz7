@@ -46,7 +46,7 @@ button{width:100%;font-size:17px;padding:12px;border:0;border-radius:8px;backgro
 <div><label for="typ">Side</label><select id="typ"><option value="C">Calls</option><option value="P">Puts</option></select></div>
 <div style="grid-column:1/-1"><label>Expiries (tap to select)</label><div id="expbox" class="s">Paste or load data first.</div></div>
 <div><label for="spot">Spot price (optional)</label><input id="spot" type="number" inputmode="decimal"></div>
-<div><label for="mul">Quantity (lot size x lots)</label><input id="mul" type="text" inputmode="decimal" value="1"></div>
+<div><label for="mul">Lots (buy side)</label><input id="mul" type="text" inputmode="decimal" value="1"></div>
 </div>
 <div id="pb">
 <div class="row">
@@ -79,7 +79,7 @@ button{width:100%;font-size:17px;padding:12px;border:0;border-radius:8px;backgro
 <div><label for="prd">Product</label><select id="prd"><option value="MARGIN">Overnight (MARGIN)</option><option value="INTRADAY">Intraday</option></select></div>
 <div><label for="mck">Max checks per tap</label><input id="mck" type="number" inputmode="numeric" value="10"></div>
 <div><label for="plk">Min credit per lakh (checked rows)</label><input id="plk" type="text" inputmode="decimal" placeholder="e.g. 500"></div>
-<div><label for="lot">Lot size (optional check)</label><input id="lot" type="number" inputmode="numeric" placeholder="e.g. 75"></div>
+<div><label for="lot">Lot size (from Fyers, automatic; type to override)</label><input id="lot" type="number" inputmode="numeric" placeholder="learned from Fyers"></div>
 <div><label for="srt">Butterfly sort</label><select id="srt"><option value="ratio">Profit/risk</option><option value="rom">Return on margin</option></select></div>
 </div>
 <div class="row">
@@ -101,7 +101,64 @@ button{width:100%;font-size:17px;padding:12px;border:0;border-radius:8px;backgro
 var LIVE=false,TMR=null,BUSY=false,DEPTH={};
 function num(x){var n=parseFloat(x);return isFinite(n)?n:null}
 function get(o,paths){for(var i=0;i<paths.length;i++){var v=o,p=paths[i].split(".");for(var j=0;j<p.length&&v!=null;j++)v=v[p[j]];if(v!=null&&v!=="")return num(v)}return null}
-var ROWS=[];
+var ROWS=[],LOTS={},PROBING={},MST={},MSTP={},MISS={};
+try{LOTS=JSON.parse(localStorage.getItem("nse_lots")||"{}")}catch(e){LOTS={}}
+Object.keys(LOTS).forEach(function(k){if(typeof LOTS[k]==="number")LOTS[k]={n:LOTS[k],src:"probe",t:0}});
+function qtyMul(){return(num(document.getElementById("mul").value)||1)*(num(document.getElementById("lot").value)||1)}
+function saveLots(){try{localStorage.setItem("nse_lots",JSON.stringify(LOTS))}catch(e){}}
+function lotOf(u){return LOTS[u]?LOTS[u].n:null}
+function freshLot(e){return !!e&&(e.src==="manual"||Date.now()-e.t<6048e5)}
+function setLot(){var e=LOTS[val("und").toUpperCase()];document.getElementById("lot").value=e?String(e.n):""}
+function learnLot(u,n,src){LOTS[u]={n:n,src:src||"probe",t:Date.now()};saveLots();if(val("und").toUpperCase()===u)document.getElementById("lot").value=String(n)}
+function lotFrom(j){var m=/minimum lot size\s+(\d+)/i.exec((j&&j.message)||"");return m?parseInt(m[1],10):null}
+function eat(line,m){
+  var f=line.split(",");if(f.length<14||f[9].indexOf(":")<0)return;
+  var lot=parseInt(f[3],10),u=f[13].trim(),x=parseInt(f[8],10)||0,c=m[u],now=Date.now()/1000-86400;
+  if(!(lot>0)||!u)return;
+  if(!c||(x>=now&&(c.x<now||x<c.x)))m[u]={x:x,l:lot};
+}
+function readStream(r,m){
+  if(!r.body||!r.body.getReader)return r.text().then(function(t){t.split("\n").forEach(function(l){eat(l,m)})});
+  var rd=r.body.getReader(),dec=new TextDecoder(),buf="";
+  function pump(){return rd.read().then(function(o){
+    if(o.done){if(buf)eat(buf,m);return}
+    buf+=dec.decode(o.value,{stream:true});var a=buf.split("\n");buf=a.pop();a.forEach(function(l){eat(l,m)});return pump()})}
+  return pump();
+}
+function getMaster(ex,force){
+  var c=MST[ex];
+  if(!c){try{c=JSON.parse(localStorage.getItem("nse_mst_"+ex)||"null")}catch(e){c=null}}
+  if(c&&!force&&Date.now()-c.t<6048e5){MST[ex]=c;return Promise.resolve(c.m)}
+  if(MSTP[ex])return MSTP[ex];
+  document.getElementById("st").textContent="Downloading the lot size list from Fyers (about once a week, may take a minute)...";
+  var m={};
+  MSTP[ex]=fetch("https://public.fyers.in/sym_details/"+ex+"_FO.csv").then(function(r){
+    if(!r.ok)throw new Error("HTTP "+r.status);return readStream(r,m)})
+  .then(function(){
+    if(!Object.keys(m).length)throw new Error("empty list");
+    var o={t:Date.now(),m:m};MST[ex]=o;try{localStorage.setItem("nse_mst_"+ex,JSON.stringify(o))}catch(e){}
+    MSTP[ex]=null;return m},
+  function(err){MSTP[ex]=null;throw err});
+  return MSTP[ex];
+}
+function ensureLot(u){
+  if(freshLot(LOTS[u]))return Promise.resolve(true);
+  var ex=fySym(u).indexOf("BSE:")===0?"BSE":"NSE";
+  return getMaster(ex).then(function(m){
+    if(m[u]){learnLot(u,m[u].l,"master");return true}
+    var c=MST[ex];
+    if(c&&Date.now()-c.t>36e5&&!MISS[u]){MISS[u]=1;return getMaster(ex,true).then(function(m2){if(m2[u]){learnLot(u,m2[u].l,"master");return true}return false})}
+    return false;
+  }).catch(function(){return false});
+}
+function probeLot(u,sym){
+  if(PROBING[u])return;PROBING[u]=1;MGN++;showReq();
+  fetch("https://api.fyers.in/api/v2/span_margin",{method:"POST",headers:{"Authorization":val("fa")+":"+val("ft"),"Content-Type":"application/json"},
+    body:JSON.stringify({data:[{symbol:sym,qty:1,side:1,type:2,productType:"MARGIN",limitPrice:0.0,stopLoss:0.0}]})})
+  .then(function(r){return r.text()}).then(function(t){var n=lotFrom(loose(t));
+    if(n){learnLot(u,n,"probe");scan();document.getElementById("st").textContent+=" Lot size "+n+" learned from Fyers."}})
+  .catch(function(){}).then(function(){PROBING[u]=0});
+}
 function val(i){return document.getElementById(i).value.trim()}
 function loose(t){try{return JSON.parse(t)}catch(e){var i=t.indexOf("}{");if(i>0){try{return JSON.parse(t.slice(0,i+1))}catch(x){}}return null}}
 function ex6(e){var m=/^(\d\d)-(\d\d)-(\d{4})$/.exec(e.date||"");if(m)return m[1]+m[2]+m[3].slice(2);
@@ -142,7 +199,7 @@ function rs(n){return n==null?"\u2013":Math.round(n).toLocaleString("en-IN")}
 var HID=0,MG={},MGN=0;
 function mkey(legs){return val("prd")+"|"+legs.map(function(x){return x.s+":"+x.side+":"+x.qty}).join("|")}
 function legsHtml(r){
-  var tags=r.tags,t="",MV=num(document.getElementById("mul").value)||1;
+  var tags=r.tags,t="",MV=qtyMul();
   r.L.forEach(function(l){if(DEPTH[l.sym])t=DEPTH[l.sym].t});
   var sc=r.q.some(function(x){return Math.abs(x-Math.round(x))>1e-9})?2:1,legs=r.L.map(function(l,i){var m=r.q[i];return{s:l.sym,side:m>0?1:-1,qty:Math.round(Math.abs(m)*MV*sc*1000)/1000}}),g=MG[mkey(legs)],bs='style="margin-top:6px;padding:8px;font-size:15px;background:var(--card);color:var(--ink);border:1px solid var(--line)"';
   return '<div class="bks" style="grid-template-columns:repeat('+r.L.length+',1fr)">'+r.L.map(function(l,i){return bookHtml(l,tags[i])}).join("")+'</div>'+
@@ -168,7 +225,7 @@ function scanB(){
   if(!rows.length){msg.textContent="No option contracts found in the pasted data. Open the tickers link again and copy everything on the page.";return}
   var und=document.getElementById("und").value,typ=document.getElementById("typ").value,
       maxw=num(document.getElementById("wid").value)||1e9,minr=num(document.getElementById("rat").value)||0;
-  var MUL=num(document.getElementById("mul").value)||1,clo=num(document.getElementById("clo").value),chi=num(document.getElementById("chi").value),
+  var MUL=qtyMul(),clo=num(document.getElementById("clo").value),chi=num(document.getElementById("chi").value),
       srt=document.getElementById("srt").value;
   var exps={};rows.forEach(function(r){if(r.und===und&&r.type===typ&&expLive(r.exp))exps[r.exp]=1});
   Object.keys(EXPSEL).forEach(function(k){if(!expLive(k))delete EXPSEL[k]});
@@ -227,7 +284,7 @@ function scanR(){
   try{rows=getRows()}catch(e){msg.textContent="Could not read the pasted data. Paste the whole page text, starting with { and ending with }.";return}
   if(!rows.length){msg.textContent="No option contracts found in the pasted data.";return}
   var g=function(i){return document.getElementById(i).value};
-  var und=g("und"),typ=g("typ"),X0=num(g("rx")),M0=num(g("mx")),Y=num(g("ry")),MUL=num(g("mul"))||1,c1=g("c1"),c2=g("c2"),dir=typ==="C"?1:-1,
+  var und=g("und"),typ=g("typ"),X0=num(g("rx")),M0=num(g("mx")),Y=num(g("ry")),MUL=qtyMul(),c1=g("c1"),c2=g("c2"),dir=typ==="C"?1:-1,
       a2=num(g("s2lo")),b2=num(g("s2hi")),plk=num(g("plk")),xs=[],ms=[];HID=0;
   if(X0==null||X0===0){var XM=num(g("xm"))||10;for(var x=1;x<=XM;x+=0.5)xs.push(x)}else if(X0>=1)xs=[X0];else{msg.textContent="ATM ratio must be 0 (try all) or at least 1.";return}
   if(M0==null)ms=[1];else if(M0===0){for(var i=1;i<=10;i++)ms.push(i/10)}else if(M0>0)ms=[M0/100];else{msg.textContent="Later ratio % must be 0 (try all) or above 0.";return}
@@ -335,11 +392,12 @@ function load(){
     var seq=Promise.resolve();
     ex.slice(1,n).forEach(function(e){seq=seq.then(function(){return wait(300)}).then(function(){return fy(base+"&timestamp="+e.expiry)}).then(function(j2){var r2=chainRows(j2,und,ex6(e));all=all.concat(r2.rows);spot=r2.spot||spot})});
     return seq;
-  }).then(function(){
+  }).then(function(){return ensureLot(und)}).then(function(){
     ROWS=all;document.getElementById("inp").value="";
     document.getElementById("fut").textContent=und+" spot "+(spot!=null?fx(spot,2):"not in reply");
     scan();
-    st.textContent="Updated "+new Date().toLocaleTimeString()+" ("+all.length+" contracts)"+(mkt()?"":". Market closed, so prices are stale and bid/ask may be empty.");
+    st.textContent="Updated "+new Date().toLocaleTimeString()+" ("+all.length+" contracts)"+(mkt()?"":". Market closed, so prices are stale and bid/ask may be empty.")+(val("lot")?" Lot size "+val("lot")+".":" Lot size not found automatically; trying another way. You can also type it in.");
+    if(!val("lot")&&all.length)probeLot(und,all[0].sym);
     BUSY=false;
   }).catch(function(e){
     var m=e.message;if(e instanceof TypeError)m="Could not reach Fyers (network or browser block).";
@@ -358,8 +416,8 @@ document.getElementById("live").addEventListener("click",function(){
 });
 ["fa","ft"].forEach(function(i){var e=document.getElementById(i);try{e.value=localStorage.getItem("bt_"+i)||""}catch(x){}
   e.addEventListener("input",function(){try{localStorage.setItem("bt_"+i,e.value.trim())}catch(x){}})});
-document.getElementById("und").addEventListener("change",function(){ROWS=[];document.getElementById("out").innerHTML="";if(LIVE)load()});
-showReq();
+document.getElementById("und").addEventListener("change",function(){setLot();ensureLot(val("und").toUpperCase()).then(setLot);ROWS=[];document.getElementById("out").innerHTML="";if(LIVE)load()});
+showReq();setLot();document.getElementById("lot").addEventListener("input",function(){var u=val("und").toUpperCase(),n=num(this.value);if(n>0){LOTS[u]={n:n,src:"manual",t:Date.now()}}else delete LOTS[u];saveLots()});
 document.getElementById("go").addEventListener("click",function(){stop();scan()});
 
 function loadDepth(syms){
@@ -380,7 +438,7 @@ function mfetch(legs){
   .then(function(r){return r.text().then(function(t){
     var j=loose(t);
     if(!j)throw new Error("Unreadable reply (HTTP "+r.status+")");
-    if(j.s!=="ok"||!j.data)throw new Error((j.message||"error")+" (code "+j.code+")");
+    if(j.s!=="ok"||!j.data){var ln=lotFrom(j),e2;if(ln){learnLot(val("und").toUpperCase(),ln,"probe");e2=new Error("Lot size for "+val("und").toUpperCase()+" is "+ln+" (learned from Fyers). Quantities now use it. Tap Check margin again.");e2.learned=true;throw e2}throw new Error((j.message||"error")+" (code "+j.code+")")}
     MG[key]={total:num(j.data.total),span:num(j.data.span),expo:num(j.data.expo),benefit:num(j.data.benefit)};return MG[key]})})
   .catch(function(e){if(e instanceof TypeError)throw new Error("Could not reach the Fyers margin service (network or browser block).");throw e});
 }
@@ -388,7 +446,7 @@ document.getElementById("out").addEventListener("click",function(e){
   var b=e.target.closest(".dp");
   if(b){b.textContent="Loading...";loadDepth(b.getAttribute("data-s").split(",")).then(function(){scan()}).catch(function(err){b.textContent="Failed: "+err.message});return}
   b=e.target.closest(".mgb");
-  if(b){b.textContent="Checking...";mfetch(JSON.parse(decodeURIComponent(b.getAttribute("data-m")))).then(function(){scan()}).catch(function(err){b.textContent="Failed: "+err.message});return}
+  if(b){b.textContent="Checking...";mfetch(JSON.parse(decodeURIComponent(b.getAttribute("data-m")))).then(function(){scan()}).catch(function(err){if(err.learned){scan();document.getElementById("msg").textContent=err.message}else b.textContent="Failed: "+err.message});return}
   b=e.target.closest(".mga");
   if(b){
     var sc=b.getAttribute("data-s")==="all"?document.getElementById("out"):b.closest(".c"),max=parseInt(val("mck"),10)||10,list=[];
