@@ -7,19 +7,21 @@
 <style>
 :root{
   --bg:#f3f5f2;--ink:#14201a;--mute:#5b6a61;--card:#fff;--line:#d5ddd6;--acc:#0e6b4f;--bad:#a63a2a;--good:#0e6b4f;--warn:#b57c1e;
-  --rail-w:46px;--drawer-w:360px;
+  --spike-bg:rgba(210,75,45,.09);--spike-line:#d95338;
+  --rail-w:46px;--drawer-w:375px;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#101814;--ink:#e6efe9;--mute:#8fa297;--card:#18231d;--line:#2a3a31;--acc:#4cc79a;--bad:#e08a79;--good:#4cc79a;--warn:#e5b55f;color-scheme:dark
+    --bg:#0e1512;--ink:#e6efe9;--mute:#8fa297;--card:#15201b;--line:#26382f;--acc:#4cc79a;--bad:#e08a79;--good:#4cc79a;--warn:#e5b55f;
+    --spike-bg:rgba(224,105,80,.13);--spike-line:#e06c55;color-scheme:dark
   }
 }
 *{box-sizing:border-box}
 a{color:var(--acc)}
 body{
   margin:0;background:var(--bg);color:var(--ink);
-  font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   padding:14px calc(var(--rail-w) + 14px) 24px 14px;
   transition:padding-right .2s ease;
 }
@@ -31,7 +33,7 @@ body.drawer-open{padding-right:calc(var(--rail-w) + var(--drawer-w) + 14px)}
 /* Main workspace */
 .topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 h1{font-size:20px;margin:0}
-.sub{color:var(--mute);margin:2px 0 0;font-size:13px}
+.sub{color:var(--mute);margin:2px 0 0;font-size:12.5px}
 .quickbar{
   display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;
   background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px
@@ -39,16 +41,16 @@ h1{font-size:20px;margin:0}
 .quickbar .qitem{flex:1 1 130px;min-width:110px}
 label{font-size:12px;color:var(--mute);display:block;margin-bottom:3px}
 input,select,textarea{
-  width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;
+  width:100%;font-size:13.5px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;
   background:var(--card);color:var(--ink)
 }
 textarea{height:90px;font:12px monospace}
 button{
-  font-size:14px;padding:8px 14px;border:0;border-radius:7px;background:var(--acc);color:var(--bg);
+  font-size:13.5px;padding:8px 14px;border:0;border-radius:7px;background:var(--acc);color:var(--bg);
   font-weight:600;cursor:pointer
 }
 button.sec{background:var(--card);color:var(--ink);border:1px solid var(--line)}
-button.sm{padding:6px 10px;font-size:13px}
+button.sm{padding:5px 10px;font-size:12.5px}
 
 /* Right TradingView-style rail & drawer */
 .tv-rail{
@@ -67,7 +69,7 @@ button.sm{padding:6px 10px;font-size:13px}
 .tv-drawer{
   position:fixed;top:0;right:var(--rail-w);bottom:0;width:var(--drawer-w);max-width:calc(100vw - var(--rail-w));
   background:var(--card);border-left:1px solid var(--line);
-  box-shadow:-6px 0 24px rgba(0,0,0,.18);
+  box-shadow:-6px 0 24px rgba(0,0,0,.22);
   transform:translateX(100%);visibility:hidden;
   transition:transform .2s ease,visibility .2s ease;
   z-index:1000;display:flex;flex-direction:column
@@ -78,58 +80,93 @@ button.sm{padding:6px 10px;font-size:13px}
   padding:12px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:15px
 }
 .drawer-body{padding:12px 14px;overflow-y:auto;flex:1}
-.sec-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:14px 0 6px;font-weight:700}
-.sec-title:first-child{margin-top:0}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
-.seg{display:flex;gap:6px;margin:6px 0 10px}
-.seg button{flex:1;padding:8px;font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
-.seg button.on{background:var(--acc);color:var(--bg);border-color:var(--acc)}
-.chip{display:inline-flex;align-items:center;padding:5px 10px;border:1px solid var(--line);border-radius:99px;margin:0 5px 5px 0;font-size:13px;color:var(--ink);background:var(--bg);cursor:pointer}
+.sec-title{
+  font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);
+  margin:14px 0 6px;font-weight:700;border-top:1px solid var(--line);padding-top:10px
+}
+.sec-title:first-child{margin-top:0;border-top:0;padding-top:0}
+.step-sub{font-size:11.5px;font-weight:700;color:var(--ink);margin:8px 0 4px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0}
+.chip{display:inline-flex;align-items:center;padding:5px 10px;border:1px solid var(--line);border-radius:99px;margin:0 5px 5px 0;font-size:12.5px;color:var(--ink);background:var(--bg);cursor:pointer}
 .chip input{width:auto;margin-right:5px}
 
-/* Cards & output */
-#msg{margin:8px 0;font-size:13px;color:var(--bad);white-space:pre-wrap}
-#st{font-size:13px;color:var(--mute);margin:4px 0}
-.c{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:11px;margin:8px 0}
-.c b{font-size:15px}
-.g{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;margin-top:6px}
-.g span:nth-child(odd){color:var(--mute)}
-.tag{display:inline-block;padding:2px 8px;border-radius:99px;border:1px solid var(--good);color:var(--good);font-size:12px;font-weight:600;white-space:nowrap}
-.tag.est{border-color:var(--warn);color:var(--warn)}
-.tag.mute{border-color:var(--line);color:var(--mute);font-weight:500}
-.sym-badge{display:inline-block;padding:3px 8px;border-radius:6px;background:var(--acc);color:var(--bg);font-weight:700;font-size:12px;text-align:center;white-space:nowrap}
-details{border-top:1px solid var(--line);padding:8px 0;margin-top:6px}
-.c > details:first-child{border-top:0;padding:2px 0;margin-top:0}
-details summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none}
-details summary::-webkit-details-marker{display:none}
+/* Sticky Sortable Header Bar */
+.col-hdr{
+  position:sticky;top:0;z-index:20;
+  display:grid;
+  grid-template-columns: 118px 142px 160px 185px 82px 86px 128px 115px auto;
+  align-items:center;column-gap:8px;
+  background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  padding:7px 11px;margin:6px 0;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);
+  box-shadow:0 2px 8px rgba(0,0,0,.08)
+}
+.col-hdr.single{
+  grid-template-columns: 170px 190px 85px 90px 130px 120px auto;
+}
+.col-hdr span[data-srt]{cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:3px}
+.col-hdr span[data-srt]:hover{color:var(--ink)}
+.col-hdr span[data-srt].on{color:var(--acc)}
 
 /* Invisible Column Alignment for Scanner Rows */
 .srow{
   display:grid;
-  grid-template-columns: 120px 150px 165px 175px 95px 95px 135px auto;
+  grid-template-columns: 118px 142px 160px 185px 82px 86px 128px 115px auto;
   align-items:center;
-  column-gap:10px;
+  column-gap:8px;
   font-variant-numeric:tabular-nums;
   white-space:nowrap;
 }
 .srow.single{
-  grid-template-columns: 175px 180px 95px 95px 135px auto;
+  grid-template-columns: 170px 190px 85px 90px 130px 120px auto;
 }
 .srow .sc{overflow:hidden;text-overflow:ellipsis}
-.srow .sc-muted{color:var(--mute);font-weight:500;font-size:13px}
-@media (max-width:1100px){
+.srow .sc-muted{color:var(--mute);font-weight:500;font-size:12.5px}
+@media (max-width:1180px){
+  .col-hdr,.col-hdr.single{display:none}
   .srow,.srow.single{display:flex;flex-wrap:wrap;gap:6px 12px}
 }
 
-.bks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+/* Cards, LTP Spike Highlight & 2-Column Expanded Layout */
+#msg{margin:8px 0;font-size:13px;color:var(--bad);white-space:pre-wrap}
+#st{font-size:13px;color:var(--mute);margin:4px 0}
+.c{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 11px;margin:7px 0;transition:border-color .15s}
+.c.spike-card, details.spike-row{
+  background:var(--spike-bg);
+  border-left:4px solid var(--spike-line) !important;
+  padding-left:9px;border-radius:7px;
+}
+.c b{font-size:14.5px}
+.exp-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;margin-top:8px;align-items:start}
+@media (max-width:860px){.exp-grid{grid-template-columns:1fr}}
+.g{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px;background:var(--bg);padding:9px 11px;border-radius:8px;border:1px solid var(--line)}
+.g span:nth-child(odd){color:var(--mute)}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;border:1px solid var(--good);color:var(--good);font-size:11.5px;font-weight:600;white-space:nowrap}
+.tag.est{border-color:var(--warn);color:var(--warn)}
+.tag.mute{border-color:var(--line);color:var(--mute);font-weight:500}
+.tag.liq-ok{border-color:rgba(76,199,154,.45);color:var(--good);font-size:11px;padding:1px 7px}
+.tag.liq-warn{border-color:rgba(229,181,95,.5);color:var(--warn);font-size:11px;padding:1px 7px}
+.tag.spike{
+  background:var(--spike-line);border-color:var(--spike-line);color:#fff;
+  font-size:11px;font-weight:700;padding:1px 7px;margin-left:4px;
+  animation:pulseSpike 1.6s infinite ease-in-out
+}
+@keyframes pulseSpike{0%,100%{opacity:1}50%{opacity:.72}}
+.sym-badge{display:inline-block;padding:3px 8px;border-radius:6px;background:var(--acc);color:var(--bg);font-weight:700;font-size:12px;text-align:center;white-space:nowrap}
+details{border-top:1px solid var(--line);padding:7px 0;margin-top:5px}
+.c > details:first-child{border-top:0;padding:2px 0;margin-top:0}
+details summary{cursor:pointer;font-weight:600;font-size:13.5px;list-style:none}
+details summary::-webkit-details-marker{display:none}
+
+.bks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .bh{font-weight:600;font-size:12px;margin-bottom:2px;white-space:nowrap}
-.bt,.bk{display:flex;justify-content:space-between;font-size:12px;padding:1px 3px}
+.bt,.bk{display:flex;justify-content:space-between;font-size:11.5px;padding:1px 3px}
 .bt{color:var(--mute)}
 .bk{background:linear-gradient(to left,var(--bgc) var(--w),transparent var(--w))}
 .bk.a{--bgc:rgba(200,70,50,.28);color:var(--bad)}
 .bk.b{--bgc:rgba(20,140,100,.28);color:var(--good)}
 .bm{display:flex;flex-direction:column;padding:4px 3px;margin:2px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px;color:var(--mute)}
-.bm b{font-size:14px;color:var(--ink)}
+.bm b{font-size:13.5px;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -138,11 +175,11 @@ details summary::-webkit-details-marker{display:none}
 <div class="topbar">
   <div>
     <h1>NSE options scanner</h1>
-    <div class="sub" id="fut">Weekly &amp; Current Month default (Next Month optional) • Sold strike ≤ 29.5% from spot</div>
+    <div class="sub" id="fut">Step 1 &amp; Step 2 Liquidity Guard active • Highlights &gt;30% LTP jump on Step 2 selling leg</div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
     <button id="live">Start live</button>
-    <button id="scanTierBtn" class="sec" title="Stage 1: fetch chains and keep every setup that could still reach your ₹/lakh. Stage 2: exact Fyers margin on every survivor.">Scan Tier</button>
+    <button id="scanTierBtn" class="sec" title="Stage 1: fetch chains &amp; filter by Step 1/2 Liquidity + IV Estimate. Stage 2: exact Fyers margin.">Scan Tier</button>
     <button id="go" class="sec">Scan pasted</button>
   </div>
 </div>
@@ -195,7 +232,7 @@ details summary::-webkit-details-marker{display:none}
   <div class="drawer-body">
     <div class="sec-title">Strategy &amp; Market</div>
     <div class="row">
-      <div class="sub" style="grid-column:1/-1">Symbol, tier, side, strategy and the ₹/lakh filter are in the top bar (one control each). Everything below applies to every scan.</div>
+      <div class="sub" style="grid-column:1/-1">Symbol, tier, side, strategy and the ₹/lakh filter are in the top bar.</div>
       <div style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span class="sub" id="mstInfo">Master cache: checking...</span>
         <button type="button" class="sec sm" id="refreshMst">Refresh F&amp;O list</button>
@@ -210,6 +247,52 @@ details summary::-webkit-details-marker{display:none}
       <div style="grid-column:1/-1">
         <label for="maxsd">Max sold strike % from spot (default 29.5%)</label>
         <input id="maxsd" type="number" step="0.1" inputmode="decimal" value="29.5">
+      </div>
+    </div>
+
+    <!-- Step 1 & Step 2 Liquidity + LTP Spike Filter -->
+    <div class="sec-title">Step 1 &amp; Step 2 Liquidity Guard</div>
+    <div class="step-sub">Step 1 (ATM Ratio Finder: Buy k0 / Sell k1)</div>
+    <div class="row">
+      <div>
+        <label for="sp1">Max Step 1 spread % (0=off)</label>
+        <input id="sp1" type="number" step="0.5" inputmode="decimal" value="6" placeholder="e.g. 6">
+      </div>
+      <div>
+        <label for="oi1">Min k1 sell OI (lots)</label>
+        <input id="oi1" type="number" inputmode="numeric" value="50" placeholder="e.g. 50">
+      </div>
+      <div style="grid-column:1/-1">
+        <label for="vol1">Min k1 sell Volume (lots, 0=off)</label>
+        <input id="vol1" type="number" inputmode="numeric" value="10" placeholder="e.g. 10">
+      </div>
+    </div>
+
+    <div class="step-sub">Step 2 (Later Strikes: Buy kb / Sell kS)</div>
+    <div class="row">
+      <div>
+        <label for="sp2">Max Step 2 spread % (0=off)</label>
+        <input id="sp2" type="number" step="0.5" inputmode="decimal" value="8" placeholder="e.g. 8">
+      </div>
+      <div>
+        <label for="oi2">Min kS sell OI (lots)</label>
+        <input id="oi2" type="number" inputmode="numeric" value="50" placeholder="e.g. 50">
+      </div>
+      <div>
+        <label for="vol2">Min kS sell Vol (lots)</label>
+        <input id="vol2" type="number" inputmode="numeric" value="10" placeholder="e.g. 10">
+      </div>
+      <div>
+        <label for="bsz2">Min kS best-bid qty (lots)</label>
+        <input id="bsz2" type="number" step="0.5" inputmode="decimal" value="1" placeholder="e.g. 1">
+      </div>
+      <div>
+        <label for="reloi">Min OI % of expiry peak OI</label>
+        <input id="reloi" type="number" step="0.5" inputmode="decimal" value="2" placeholder="e.g. 2">
+      </div>
+      <div>
+        <label for="spikepct">Highlight kS LTP jump &gt; %</label>
+        <input id="spikepct" type="number" step="1" inputmode="decimal" value="30" placeholder="e.g. 30">
       </div>
     </div>
 
@@ -312,7 +395,6 @@ TIER2_SYMS.forEach(function(s){if(!T1_SET[s])T2_SET[s]=1});
 var LIQ={};try{LIQ=JSON.parse(localStorage.getItem("nse_liq")||"{}")}catch(e){LIQ={}}
 function saveLiq(){try{localStorage.setItem("nse_liq",JSON.stringify(LIQ))}catch(e){}}
 function medianOf(a){if(!a.length)return null;var x=a.slice().sort(function(p,q){return p-q});return x[Math.floor((x.length-1)/2)]}
-/* Measure how tradable a symbol really is from its live chain: share of near-ATM options quoted both sides, and their median bid-ask gap */
 function noteLiquidity(und,rows,spot){
   if(!mkt()||!spot||!rows.length)return;
   var e0=rows[0].exp,by=rows.filter(function(r){return r.exp===e0&&r.k!=null}),ks=[],seen={};
@@ -403,24 +485,28 @@ document.getElementById("tier").addEventListener("change",function(){
 });
 document.getElementById("plan").addEventListener("change",function(){try{localStorage.setItem("sc_plan",this.value)}catch(e){}showReq()});
 document.getElementById("mode_q").addEventListener("change",function(){setMode(this.value)});
-document.getElementById("minbd").addEventListener("input",function(){
-  try{localStorage.setItem("sc_minbd",this.value)}catch(e){}
-  if(TIER_MODE)renderTierLeaderboard();
-  else if(ROWS.length||val("inp"))scan();
-});
-document.getElementById("maxsd").addEventListener("input",function(){
-  try{localStorage.setItem("sc_maxsd",this.value)}catch(e){}
-  if(TIER_MODE)renderTierLeaderboard();
-  else if(ROWS.length||val("inp"))scan();
+
+/* Persist & re-scan on Liquidity + Strike % inputs */
+["minbd","maxsd","sp1","oi1","vol1","sp2","oi2","vol2","bsz2","reloi","spikepct"].forEach(function(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.addEventListener("input",function(){
+    try{localStorage.setItem("sc_"+id,this.value)}catch(e){}
+    if(TIER_MODE)renderTierLeaderboard();
+    else if(ROWS.length||val("inp"))scan();
+  });
 });
 
 var LIVE=false,TMR=null,BUSY=false,TIER_BUSY=false,TIER_ABORT=false,TIER_MODE=false,TIER_ITEMS=[],DEPTH={};
 var EXPMETA={},LAST_PICKED=[];
-function num(x){var n=parseFloat(x);return isFinite(n)?n:null}
-var ROWS=[],LOTS={},PROBING={},MST={},MSTP={},MISS={},PEND=[],PENDK={},HID=0,HIDU=0,AUTOBUSY=false,TTL=12e5,MD={d:"",n:0},MMIN=[];
+/* Track previous scan's LTP per option symbol to detect >30% single-scan LTP jumps */
+var PREV_LTP={},JUMP_MEM={};
+var SORT_COL="plk",SORT_DIR=-1;
 
-/* Self-learning per-symbol SPAN calibration factor (learned when Method A runs) */
-/* Estimate-vs-exact margin samples (raw estimate vs real Fyers SPAN), kept per strategy and per symbol */
+function num(x){var n=parseFloat(x);return isFinite(n)?n:null}
+var ROWS=[],LOTS={},PROBING={},MST={},MSTP={},MISS={},PEND=[],PENDK={},HID=0,HIDU=0,LIQ_SKIP1=0,LIQ_SKIP2=0,AUTOBUSY=false,TTL=12e5,MD={d:"",n:0},MMIN=[];
+
+/* Estimate-vs-exact margin samples */
 var CALS={R:{g:[],s:{}},B:{g:[],s:{}}};
 try{var _c=JSON.parse(localStorage.getItem("nse_cal2")||"null");if(_c&&_c.R&&_c.B)CALS=_c}catch(e){}
 function saveCals(){try{localStorage.setItem("nse_cal2",JSON.stringify(CALS))}catch(e){}}
@@ -523,8 +609,6 @@ function loose(t){try{return JSON.parse(t)}catch(e){var i=t.indexOf("}{");if(i>0
 function ex6(e){var m=/^(\d\d)-(\d\d)-(\d{4})$/.exec(e.date||"");if(m)return m[1]+m[2]+m[3].slice(2);
   var t=new Date((num(e.expiry)||0)*1000+19800000);return("0"+t.getUTCDate()).slice(-2)+("0"+(t.getUTCMonth()+1)).slice(-2)+String(t.getUTCFullYear()).slice(2)}
 
-/* 1 Weekly + 2 Monthly Expiry Selector:
-   Never selects Next Month by default */
 function pick1W2M(exList){
   if(!exList||!exList.length)return [];
   var items=exList.map(function(e,idx){
@@ -585,8 +669,29 @@ function chainRows(j,und,exp){
   oc.forEach(function(o){
     var ty=o.option_type==="CE"?"C":(o.option_type==="PE"?"P":null);if(!ty)return;
     var b=num(o.bid),a=num(o.ask);if(b!=null&&b<=0)b=null;if(a!=null&&a<=0)a=null;
-    rows.push({sym:o.symbol,type:ty,und:und,k:num(o.strike_price),exp:exp,bid:b,ask:a,d:(o.greeks&&num(o.greeks.delta)!=null)?(ty==="P"?-Math.abs(num(o.greeks.delta)):Math.abs(num(o.greeks.delta))):null,oi:num(o.oi),spot:spot,miv:(o.greeks&&num(o.greeks.iv)!=null)?num(o.greeks.iv):null,
-      mark:(b!=null&&a!=null)?(a+b)/2:null,last:num(o.ltp),bsz:num(o.bid_qty!=null?o.bid_qty:o.bid_size),asz:num(o.ask_qty!=null?o.ask_qty:o.ask_size),vol:num(o.volume)});
+    var curLtp=num(o.ltp), prev=PREV_LTP[o.symbol], tickJump=null;
+    if(curLtp!=null && curLtp>0){
+      if(prev!=null && prev>0 && prev!==curLtp){
+        tickJump=(curLtp-prev)/prev*100;
+        JUMP_MEM[o.symbol]=tickJump;
+      } else if(JUMP_MEM[o.symbol]!=null){
+        tickJump=JUMP_MEM[o.symbol];
+      }
+      PREV_LTP[o.symbol]=curLtp;
+    }
+    var chp=num(o.chp!=null?o.chp:(o.ltp_chp!=null?o.ltp_chp:null));
+    var prevClose=num(o.prev_close_price!=null?o.prev_close_price:o.pcp);
+    if(chp==null && curLtp!=null && prevClose!=null && prevClose>0){
+      chp=(curLtp-prevClose)/prevClose*100;
+    }
+    rows.push({
+      sym:o.symbol,type:ty,und:und,k:num(o.strike_price),exp:exp,bid:b,ask:a,
+      d:(o.greeks&&num(o.greeks.delta)!=null)?(ty==="P"?-Math.abs(num(o.greeks.delta)):Math.abs(num(o.greeks.delta))):null,
+      oi:num(o.oi),spot:spot,miv:(o.greeks&&num(o.greeks.iv)!=null)?num(o.greeks.iv):null,
+      mark:(b!=null&&a!=null)?(a+b)/2:null,last:curLtp,
+      bsz:num(o.bid_qty!=null?o.bid_qty:o.bid_size),asz:num(o.ask_qty!=null?o.ask_qty:o.ask_size),
+      vol:num(o.volume),chp:chp,tickJump:tickJump
+    });
   });
   return{rows:rows,spot:spot};
 }
@@ -601,7 +706,7 @@ function getRows(){
 function fx(n,d){return n==null?"–":n.toFixed(d==null?2:d)}
 function sz(n){return n==null?"–":n}
 
-/* Min Bought Strike Distance Filter (0 or blank = no minimum) */
+/* Min Bought Strike Distance Filter */
 function minBuyDistFrac(){
   var v=num(document.getElementById("minbd").value);
   return (v!=null&&v>0)?(v/100):null;
@@ -623,13 +728,119 @@ function withinSellDist(sellStrike,spot){
   return (Math.abs(sellStrike-spot)/spot) <= (maxSellDistFrac()+1e-9);
 }
 
+/* ============================================================================
+   STEP 1 & STEP 2 LIQUIDITY ENGINE + >30% LTP SPIKE DETECTOR
+   ============================================================================ */
+function calcMaxOiByExp(rows,und,typ){
+  var mx={};
+  rows.forEach(function(r){
+    if(r.und===und && r.type===typ && r.oi>0){
+      if(!mx[r.exp] || r.oi>mx[r.exp]) mx[r.exp]=r.oi;
+    }
+  });
+  return mx;
+}
+
+function spreadPctOf(leg){
+  if(!leg || leg.bid==null || leg.ask==null || leg.bid<=0 || leg.ask<leg.bid) return 999;
+  var mid=(leg.ask+leg.bid)/2;
+  return mid>0 ? ((leg.ask-leg.bid)/mid*100) : 999;
+}
+
+/* Step-aware Liquidity Gatekeeper:
+   stepNum = 1 for ATM Ratio Finder (k0/k1), stepNum = 2 for Later Pair (kb/kS)
+   isSell  = true for selling legs (k1, kS), false for bought legs (k0, kb) */
+function legLiquidStep(leg, stepNum, isSell, lsz, maxExpOi){
+  if(!leg || leg.bid==null || leg.ask==null || leg.bid<=0 || leg.ask<=0 || leg.ask<leg.bid) return false;
+  var sp = leg.ask - leg.bid;
+  var mid = (leg.ask + leg.bid) / 2;
+  var spPct = mid > 0 ? (sp / mid * 100) : 999;
+  var maxSp = num(document.getElementById(stepNum===1 ? "sp1" : "sp2").value);
+
+  /* 1. Bid-Ask Spread % check (ignores tiny spreads <= Rs 0.40 on low-priced OTM options) */
+  if(maxSp != null && maxSp > 0 && sp > 0.40){
+    if(spPct > maxSp) return false;
+  }
+
+  /* 2. Stub-Bid / Stale LTP Sanity Guard:
+     Prevents a fake Rs 1.00 stub bid on a Rs 20 option from distorting Step 1 ATM ratio X */
+  if(stepNum === 1 && leg.last != null && leg.last > 1){
+    if(leg.bid < leg.last * 0.40 || leg.ask > leg.last * 2.20) return false;
+  }
+
+  /* 3. Selling Leg Open Interest, Volume, Best-Bid Qty, and Relative Peak OI checks */
+  if(isSell){
+    var lot = lsz > 0 ? lsz : 1;
+    var minOiLots = num(document.getElementById(stepNum===1 ? "oi1" : "oi2").value);
+    var minVolLots = num(document.getElementById(stepNum===1 ? "vol1" : "vol2").value);
+    var relOiPct = num(document.getElementById("reloi").value);
+
+    if(minOiLots != null && minOiLots > 0){
+      if(leg.oi == null || (leg.oi / lot) < minOiLots) return false;
+    }
+    if(minVolLots != null && minVolLots > 0 && leg.vol != null){
+      if((leg.vol / lot) < minVolLots) return false;
+    }
+    if(stepNum === 2){
+      var minBszLots = num(document.getElementById("bsz2").value);
+      if(minBszLots != null && minBszLots > 0 && leg.bsz != null){
+        if((leg.bsz / lot) < minBszLots) return false;
+      }
+    }
+    if(relOiPct != null && relOiPct > 0 && maxExpOi > 0 && leg.oi != null){
+      if((leg.oi / maxExpOi * 100) < relOiPct) return false;
+    }
+  }
+  return true;
+}
+
+/* Detect if Step 2 Selling Leg (kS) LTP changed >30% (in one scan jump, LTP vs Mid, or intraday chp) */
+function sellLegSpikeInfo(leg){
+  if(!leg) return null;
+  var thr = num(document.getElementById("spikepct").value);
+  if(!(thr > 0)) thr = 30;
+  /* Priority 1: Single-refresh LTP jump ("in one go") */
+  if(leg.tickJump != null && Math.abs(leg.tickJump) >= thr){
+    return {pct: leg.tickJump, kind: "1-Go LTP"};
+  }
+  /* Priority 2: LTP vs current Bid-Ask Mid divergence >= thr% */
+  if(leg.last != null && leg.mark != null && leg.mark > 0.5){
+    var midJump = (leg.last - leg.mark) / leg.mark * 100;
+    if(Math.abs(midJump) >= thr){
+      return {pct: midJump, kind: "LTP vs Mid"};
+    }
+  }
+  /* Priority 3: Intraday LTP % change >= thr% */
+  if(leg.chp != null && Math.abs(leg.chp) >= thr){
+    return {pct: leg.chp, kind: "LTP Chg"};
+  }
+  return null;
+}
+
+function spikeBadgeHtml(spInfo){
+  if(!spInfo) return "";
+  var s = (spInfo.pct > 0 ? "+" : "") + fx(spInfo.pct, 0) + "%";
+  return '<span class="tag spike" title="Step 2 selling leg LTP jumped '+fx(spInfo.pct,1)+'% ('+spInfo.kind+')">⚡ '+s+' LTP</span>';
+}
+
+function liqPillHtml(buyLeg, sellLeg){
+  var spB = spreadPctOf(buyLeg), spS = spreadPctOf(sellLeg);
+  var worst = Math.max(spB===999?0:spB, spS===999?0:spS);
+  var cls = worst <= 3.5 ? "liq-ok" : "liq-warn";
+  return '<span class="tag '+cls+'" title="Buy spread '+fx(spB,1)+'% • Sell spread '+fx(spS,1)+'%">Spd '+fx(spS,1)+'%</span>';
+}
+
 function bookHtml(l,tag){
   var d=DEPTH[l.sym],A,B;
   if(d){A=d.a.slice(0,3);B=d.b.slice(0,3)}else{A=l.ask!=null?[{p:l.ask,s:l.asz}]:[];B=l.bid!=null?[{p:l.bid,s:l.bsz}]:[]}
   var mx=1;A.concat(B).forEach(function(o){if(o.s!=null&&o.s>mx)mx=o.s});
   function row(o,c){var w=o.s==null?0:Math.round(o.s/mx*100);return '<div class="bk '+c+'" style="--w:'+w+'%"><span>'+fx(o.p)+'</span><span>'+sz(o.s)+'</span></div>'}
   var optLbl=l.type==="C"?"CE":"PE";
-  return '<div><div class="bh">'+tag+' • '+l.k+' '+optLbl+'</div><div style="font-size:11px;color:var(--mute);white-space:nowrap">IV '+fx(l.miv,1)+' \u0394 '+fx(l.d,2)+'</div><div style="font-size:11px;color:var(--mute);white-space:nowrap">OI '+(l.oi==null?"\u2013":l.oi)+'</div><div class="bt"><span>Price</span><span>Size</span></div>'+
+  var spP=spreadPctOf(l);
+  return '<div><div class="bh">'+tag+' • '+l.k+' '+optLbl+'</div>'+
+    '<div style="font-size:11px;color:var(--mute);white-space:nowrap">IV '+fx(l.miv,1)+' \u0394 '+fx(l.d,2)+' • Spd '+(spP===999?'–':fx(spP,1)+'%')+'</div>'+
+    '<div style="font-size:11px;color:var(--mute);white-space:nowrap">OI '+(l.oi==null?"\u2013":rs(l.oi))+' • Vol '+(l.vol==null?"\u2013":rs(l.vol))+'</div>'+
+    '<div class="bt"><span>Price</span><span>Size</span></div>'+
     A.slice().reverse().map(function(o){return row(o,"a")}).join("")+
     '<div class="bm"><b>'+fx(l.last)+'</b><span>Mark '+fx(l.mark)+'</span></div>'+
     B.map(function(o){return row(o,"b")}).join("")+'</div>';
@@ -639,7 +850,6 @@ var MG={};
 function mkey(legs){return val("prd")+"|"+legs.map(function(x){return x.s+":"+x.side+":"+x.qty}).join("|")}
 function qadd(legs,c,u,raw){var k=mkey(legs);if(!PENDK[k]){PENDK[k]=1;legs.c=c;legs.u=u;legs.raw=raw;PEND.push(legs)}}
 
-/* Helper: scale half-lots (e.g. 1 & 7.5 -> 2 & 15 lots) so every leg is whole lots */
 function scaleFactor(qArr){
   var b=baseLots();
   var needsDouble=qArr.some(function(x){return Math.abs((x*b)-Math.round(x*b))>1e-9});
@@ -686,12 +896,12 @@ function legsHtml(r,customMul){
   var tags=r.tags,t="",MV=customMul||qtyMul();
   r.L.forEach(function(l){if(DEPTH[l.sym])t=DEPTH[l.sym].t});
   var sc=scaleFactor(r.q);
-  var legs=r.L.map(function(l,i){var m=r.q[i];return{s:l.sym,side:m>0?1:-1,qty:Math.round(Math.abs(m)*MV*sc)}}),g=MG[mkey(legs)],bs='style="margin-top:6px;padding:7px;font-size:13px;width:100%"';
-  return '<div class="bks" style="grid-template-columns:repeat('+r.L.length+',1fr)">'+r.L.map(function(l,i){return bookHtml(l,tags[i])}).join("")+'</div>'+
+  var legs=r.L.map(function(l,i){var m=r.q[i];return{s:l.sym,side:m>0?1:-1,qty:Math.round(Math.abs(m)*MV*sc)}}),g=MG[mkey(legs)],bs='style="margin-top:6px;padding:7px;font-size:12.5px;width:100%"';
+  return '<div><div class="bks" style="grid-template-columns:repeat('+r.L.length+',1fr)">'+r.L.map(function(l,i){return bookHtml(l,tags[i])}).join("")+'</div>'+
     '<div class="sub" style="margin:6px 0 0">'+(t?t:'Best bid and ask only.')+'</div>'+
     '<button class="dp sec" data-s="'+r.L.map(function(l){return l.sym}).join(",")+'" '+bs+'>Load top 3 bids and asks ('+r.L.length+' requests)</button>'+
     '<div class="sub" style="margin:8px 0 0">'+(g?'Exact Fyers Margin \u20b9'+rs(g.total)+' (SPAN '+rs(g.span)+', exposure '+rs(g.expo)+')'+(g.benefit?', hedge benefit '+rs(g.benefit):''):(r.estMg?'IV-Estimated Margin ~\u20b9'+rs(r.estMg)+' (tap Check margin for exact Fyers SPAN)':'Margin not checked.'))+'</div>'+
-    '<button class="mgb sec" data-done="'+(g?1:0)+'" data-u="'+(r.und||"")+'" data-est="'+(r.estRaw||"")+'" data-kind="'+(r.q&&r.q.length===3?"B":"R")+'" data-m="'+encodeURIComponent(JSON.stringify(legs))+'" '+bs+'>'+(g?'Recheck margin':'Check exact Fyers margin')+' (1 request)</button>';
+    '<button class="mgb sec" data-done="'+(g?1:0)+'" data-u="'+(r.und||"")+'" data-est="'+(r.estRaw||"")+'" data-kind="'+(r.q&&r.q.length===3?"B":"R")+'" data-m="'+encodeURIComponent(JSON.stringify(legs))+'" '+bs+'>'+(g?'Recheck margin':'Check exact Fyers margin')+' (1 request)</button></div>';
 }
 
 function expLabel(e){
@@ -711,6 +921,33 @@ function renderExpiries(rows,und,typ){
   return el.filter(function(e){return isExpSelected(e)});
 }
 
+function colHeaderHtml(isSingle){
+  function ar(col){return SORT_COL===col?(SORT_DIR===-1?" ▼":" ▲"):""}
+  function cls(col){return SORT_COL===col?' class="on"':""}
+  if(isSingle){
+    return '<div class="col-hdr single">'+
+      '<span data-srt="kb"'+cls("kb")+'>Buy Leg'+ar("kb")+'</span>'+
+      '<span data-srt="ks"'+cls("ks")+'>Sell Leg (LTP Spike)'+ar("ks")+'</span>'+
+      '<span data-srt="gap"'+cls("gap")+'>Gap'+ar("gap")+'</span>'+
+      '<span data-srt="ratio"'+cls("ratio")+'>Ratio'+ar("ratio")+'</span>'+
+      '<span data-srt="credit"'+cls("credit")+'>Net Credit'+ar("credit")+'</span>'+
+      '<span data-srt="spd"'+cls("spd")+'>Spread'+ar("spd")+'</span>'+
+      '<span data-srt="plk"'+cls("plk")+'>Per Lakh'+ar("plk")+'</span>'+
+      '</div>';
+  }
+  return '<div class="col-hdr">'+
+    '<span data-srt="und"'+cls("und")+'>Symbol'+ar("und")+'</span>'+
+    '<span data-srt="exp"'+cls("exp")+'>Expiry'+ar("exp")+'</span>'+
+    '<span data-srt="kb"'+cls("kb")+'>Buy Leg'+ar("kb")+'</span>'+
+    '<span data-srt="ks"'+cls("ks")+'>Sell Leg (LTP Spike)'+ar("ks")+'</span>'+
+    '<span data-srt="gap"'+cls("gap")+'>Gap'+ar("gap")+'</span>'+
+    '<span data-srt="ratio"'+cls("ratio")+'>Ratio'+ar("ratio")+'</span>'+
+    '<span data-srt="credit"'+cls("credit")+'>Net Credit'+ar("credit")+'</span>'+
+    '<span data-srt="spd"'+cls("spd")+'>Spread'+ar("spd")+'</span>'+
+    '<span data-srt="plk"'+cls("plk")+'>Per Lakh'+ar("plk")+'</span>'+
+    '</div>';
+}
+
 function scanB(){
   TIER_MODE=false;
   var msg=document.getElementById("msg"),out=document.getElementById("out");msg.textContent="";out.innerHTML="";
@@ -719,8 +956,9 @@ function scanB(){
   if(!rows.length){msg.textContent="No option contracts found. Click Start live, Scan Tier, or paste Fyers data in Settings.";return}
   var und=(val("und")||rows[0].und||"NIFTY").toUpperCase(),typ=val("typ"),optLbl=typ==="C"?"CE":"PE",
       maxw=num(val("wid"))||1e9,minr=num(val("rat"))||0,plk=num(val("plk"));
-  var MUL=qtyMulFor(und),bLots=baseLots(),clo=num(val("clo")),chi=num(val("chi")),srt=val("srt"),au=val("amg")==="1";
+  var MUL=qtyMulFor(und),bLots=baseLots(),lsz=lotSizeFor(und),clo=num(val("clo")),chi=num(val("chi")),srt=val("srt"),au=val("amg")==="1";
   HID=0;HIDU=0;PEND=[];PENDK={};
+  var maxOiMap=calcMaxOiByExp(rows,und,typ);
 
   var pick=renderExpiries(rows,und,typ);
   if(!pick.length){msg.textContent="Select at least one expiry in Settings.";return}
@@ -730,14 +968,14 @@ function scanB(){
   var by={};rows.forEach(function(r){if(r.und===und&&r.type===typ&&pick.indexOf(r.exp)>=0){(by[r.exp]=by[r.exp]||{})[r.k]=r}});
   var res=[];
   Object.keys(by).forEach(function(e){
-    var ks=Object.keys(by[e]).map(Number).sort(function(a,b){return a-b}),m=by[e];
+    var ks=Object.keys(by[e]).map(Number).sort(function(a,b){return a-b}),m=by[e],maxOi=maxOiMap[e]||0;
     ks.forEach(function(k){
       if(!withinSellDist(k,spot))return;
       ks.forEach(function(lo){
         if(lo>=k)return;var w=k-lo,hi=k+w;if(w>maxw||!m[hi])return;
         if(!withinBuyDist(lo,spot)||!withinBuyDist(hi,spot))return;
         var a=m[lo],b=m[k],c=m[hi];
-        if(a.ask==null||b.bid==null||c.ask==null||b.bid<=0)return;
+        if(!legLiquidStep(a,2,false,lsz,maxOi)||!legLiquidStep(b,2,true,lsz,maxOi)||!legLiquidStep(c,2,false,lsz,maxOi))return;
         var deb=a.ask-2*b.bid+c.ask,cash=-deb*MUL;if(deb>=w)return;
         if(clo!=null&&cash<clo)return;if(chi!=null&&cash>chi)return;
         var ratio=deb>0?(w-deb)/deb:Infinity;if(deb>0&&ratio<minr)return;
@@ -757,7 +995,8 @@ function scanB(){
         var rom=(mg&&mg.total>0)?maxProf/mg.total:null;
         res.push({
           und:und,tags:["Buy "+lotTxt(bLots),"Sell "+lotTxt(2*bLots),"Buy "+lotTxt(bLots)],
-          q:[1,-2,1],p:maxProf,L:[a,b,c],cash:cash,e:e,lo:lo,k:k,hi:hi,w:w,deb:deb,ratio:ratio,nd:nd,mg:mg,rom:rom,plkVal:v,off:spot?(k-spot)/spot*100:null
+          q:[1,-2,1],p:maxProf,L:[a,b,c],cash:cash,e:e,lo:lo,k:k,hi:hi,w:w,deb:deb,ratio:ratio,nd:nd,mg:mg,rom:rom,plkVal:v,off:spot?(k-spot)/spot*100:null,
+          spike:sellLegSpikeInfo(b)
         });
       });
     });
@@ -769,19 +1008,19 @@ function scanB(){
 
   if(HID||HIDU)msg.textContent=(HID?HID+" hidden (not above ₹"+rs(plk)+"/lakh). ":"")+(HIDU?HIDU+" checking margin in background...":"");
   if(!res.length){
-    if(!HIDU)msg.textContent=(msg.textContent+" No butterflies found above target within your strike % limits.").trim();
+    if(!HIDU)msg.textContent=(msg.textContent+" No butterflies found above target within your strike % and liquidity limits.").trim();
     autoCheck();return;
   }
 
-  out.innerHTML='<div class="sub" style="margin-bottom:6px">Showing '+Math.min(res.length,25)+' of '+res.length+' matching butterflies (selling strike ≤ '+fx(maxSellDistFrac()*100,1)+'% from spot'+(minBuyDistFrac()!=null?', bought strikes ≥ '+fx(minBuyDistFrac()*100,1)+'%':'')+').</div>'+
+  out.innerHTML='<div class="sub" style="margin-bottom:6px">Showing '+Math.min(res.length,25)+' of '+res.length+' matching butterflies.</div>'+
   res.slice(0,25).map(function(r){
     var g=r.mg;
-    return '<div class="c"><b>'+expLabel(r.e)+' • Buy '+lotTxt(bLots)+' '+r.lo+' '+optLbl+' / Sell '+lotTxt(2*bLots)+' '+r.k+' '+optLbl+' / Buy '+lotTxt(bLots)+' '+r.hi+' '+optLbl+' • Gap '+r.w+' • Ratio 1:2:1 • Credit '+sg(r.cash)+'</b>'+(r.plkVal!=null?'<span class="tag" style="margin-left:6px">₹'+rs(r.plkVal)+'/lakh</span>':'')+
-    '<div class="g"><span>Net credit / debit</span><span>'+sg(r.cash)+'</span><span>Max loss</span><span>'+(r.deb>0?sg(-r.deb*MUL):'none, credit')+'</span>'+
+    return '<div class="c'+(r.spike?' spike-card':'')+'"><b>'+expLabel(r.e)+' • Buy '+lotTxt(bLots)+' '+r.lo+' '+optLbl+' / Sell '+lotTxt(2*bLots)+' '+r.k+' '+optLbl+' / Buy '+lotTxt(bLots)+' '+r.hi+' '+optLbl+' • Gap '+r.w+' • Ratio 1:2:1 • Credit '+sg(r.cash)+'</b>'+spikeBadgeHtml(r.spike)+(r.plkVal!=null?'<span class="tag" style="margin-left:6px">₹'+rs(r.plkVal)+'/lakh</span>':'')+
+    '<div class="exp-grid"><div class="g"><span>Net credit / debit</span><span>'+sg(r.cash)+'</span><span>Max loss</span><span>'+(r.deb>0?sg(-r.deb*MUL):'none, credit')+'</span>'+
     '<span>Max profit</span><span>'+sg(r.p)+'</span><span>Profit/risk</span><span>'+(r.ratio===Infinity?'credit':fx(r.ratio))+'</span>'+
-    '<span>Margin (Fyers)</span><span>'+(g?'₹'+rs(g.total):'checking / tap below')+'</span>'+
+    '<span>Margin (Fyers)</span><span>'+(g?'₹'+rs(g.total):'checking / tap right')+'</span>'+
     '<span>Profit per ₹1 lakh</span><span>'+(r.plkVal==null?'–':'₹'+rs(r.plkVal))+'</span>'+
-    '<span>Net delta</span><span>'+fx(r.nd,3)+'</span><span>Sold strike vs spot</span><span>'+(r.off==null?'–':fx(r.off,1)+'%')+'</span></div>'+legsHtml(r,MUL)+'</div>';
+    '<span>Net delta</span><span>'+fx(r.nd,3)+'</span><span>Sold strike vs spot</span><span>'+(r.off==null?'–':fx(r.off,1)+'%')+'</span></div>'+legsHtml(r,MUL)+'</div></div>';
   }).join("");
   autoCheck();
 }
@@ -800,9 +1039,9 @@ function scanR(){
   if(!rows.length){msg.textContent="No option contracts found. Click Start live, Scan Tier, or paste Fyers data in Settings.";return}
   var g=function(i){return document.getElementById(i).value};
   var und=(val("und")||rows[0].und||"NIFTY").toUpperCase(),typ=g("typ"),optLbl=typ==="C"?"CE":"PE",
-      M0=num(g("mx")),MUL=qtyMulFor(und),bLots=baseLots(),c1=g("c1"),c2=g("c2"),dir=typ==="C"?1:-1,
+      M0=num(g("mx")),MUL=qtyMulFor(und),bLots=baseLots(),lsz=lotSizeFor(und),c1=g("c1"),c2=g("c2"),dir=typ==="C"?1:-1,
       minInflow=num(g("s2lo")),plk=num(g("plk")),xs=[],ms=[];
-  HID=0;HIDU=0;PEND=[];PENDK={};
+  HID=0;HIDU=0;LIQ_SKIP1=0;LIQ_SKIP2=0;PEND=[];PENDK={};
 
   var XM=num(g("xm"))||7;
   for(var x=1;x<=XM;x+=0.5)xs.push(x);
@@ -814,6 +1053,7 @@ function scanR(){
   if(spot==null){var f=rows.filter(function(r){return r.und===und&&r.spot!=null})[0];if(f)spot=f.spot}
   if(spot==null){msg.textContent="Spot price needed to locate ATM strike.";return}
 
+  var maxOiMap=calcMaxOiByExp(rows,und,typ);
   var by={};rows.forEach(function(r){if(r.und===und&&r.type===typ&&pick.indexOf(r.exp)>=0){(by[r.exp]=by[r.exp]||{})[r.k]=r}});
   function ok(nd,c){return c==="any"||(c==="debit"?nd>0:nd<0)}
   function inr(v,lo){return !(lo!=null&&v<lo)}
@@ -827,13 +1067,15 @@ function scanR(){
 
   var res=[];
   Object.keys(by).forEach(function(e){
-    var m=by[e],ks=Object.keys(m).map(Number).sort(function(a,b){return a-b});
+    var m=by[e],ks=Object.keys(m).map(Number).sort(function(a,b){return a-b}),maxOi=maxOiMap[e]||0;
     var k0=ks.reduce(function(p,k){return Math.abs(k-spot)<Math.abs(p-spot)?k:p},ks[0]);
     var gaps=ks.map(function(k){return Math.round((k-k0)*dir*100)/100}).filter(function(d){return d>0});
     gaps.forEach(function(gap){
       var k1=Math.round((k0+dir*gap)*100)/100;if(!m[k1])return;
       if(!withinSellDist(k1,spot))return;
       var a=m[k0],b=m[k1];if(a.ask==null||b.bid==null)return;
+      /* Step 1 Liquidity Guard on ATM k0 (buy) and k1 (sell) */
+      if(!legLiquidStep(a,1,false,lsz,maxOi)||!legLiquidStep(b,1,true,lsz,maxOi)){LIQ_SKIP1++;return}
       xs.forEach(function(X){
         var nA=a.ask-X*b.bid;
         if(!ok(nA,c1))return;
@@ -844,11 +1086,13 @@ function scanR(){
           var kS=Math.round((kb+dir*gap)*100)/100;if(!m[kS])return;
           if(!withinSellDist(kS,spot))return;
           var p=m[kb],q=m[kS];if(p.ask==null||q.bid==null)return;
+          /* Step 2 Liquidity Guard on kb (buy) and kS (sell) */
+          if(!legLiquidStep(p,2,false,lsz,maxOi)||!legLiquidStep(q,2,true,lsz,maxOi)){LIQ_SKIP2++;return}
           ms.forEach(function(M){
             var X2=Math.floor(X*M*2+1e-9)/2;if(X2<=0||seen[kb+"|"+X2])return;seen[kb+"|"+X2]=1;var nB=p.ask-X2*q.bid;
             if(!ok(nB,c2)||!inr(-nB*MUL,minInflow))return;
             var wl2=wholeLots(X2);
-            pairs.push({kb:kb,ks:kS,nB:nB,X2:X2,M:M,L:[p,q],tags:["Buy "+lotTxt(wl2.buyL),"Sell "+lotTxt(wl2.sellL)]});
+            pairs.push({kb:kb,ks:kS,nB:nB,X2:X2,M:M,L:[p,q],tags:["Buy "+lotTxt(wl2.buyL),"Sell "+lotTxt(wl2.sellL)],spike:sellLegSpikeInfo(q)});
           });
         });
         var wl1=wholeLots(X);
@@ -857,14 +1101,17 @@ function scanR(){
     });
   });
 
-  if(!res.length){msg.textContent="No matching ratio spreads found on selected expiry (with buy leg ≥ "+(minBuyDistFrac()?fx(minBuyDistFrac()*100,1):0)+"% and sell leg ≤ "+fx(maxSellDistFrac()*100,1)+"% from spot).";return}
+  if(!res.length){
+    msg.textContent="No matching ratio spreads found ("+(LIQ_SKIP1?LIQ_SKIP1+" Step-1 ATM pairs ":"")+(LIQ_SKIP2?"and "+LIQ_SKIP2+" Step-2 pairs ":"")+"filtered out by Liquidity Guard or strike % limits).";
+    return;
+  }
 
   function legsOf(L,X){var sc=scaleFactor([1,-X]);return[1,-X].map(function(m,i){return{s:L[i].sym,side:m>0?1:-1,qty:Math.round(Math.abs(m)*MUL*sc)}})}
   function mgOf(L,X){return MG[mkey(legsOf(L,X))]}
   function pl(nd,mg,X){var sc=scaleFactor([1,-X]);return mg&&mg.total>0?-nd*MUL*sc/mg.total*100000:null}
 
-  var au=val("amg")==="1",lsz=lotSizeFor(und);
-  function det(key,prefix,nd,kb,ks,X,gap,L,tags){
+  var au=val("amg")==="1";
+  function det(key,prefix,nd,kb,ks,X,gap,L,tags,spikeInfo){
     if(!withinBuyDist(kb,spot)||!withinSellDist(ks,spot))return "";
     var mg=mgOf(L,X),v=pl(nd,mg,X),wl=wholeLots(X);
     var estRawD=estMarginRaw(und,spot,kb,ks,X,MUL,wl.sc,L[0],L[1]),estMg=estRawD*calInfo("R",und).med;
@@ -880,20 +1127,22 @@ function scanR(){
     var sellDistPct=spot>0?((ks-spot)/spot*100):null;
     var ratioStr="1:"+X;
     var buyCol=(prefix?prefix+": ":"")+"Buy "+lotTxt(wl.buyL)+" "+kb+" "+optLbl;
-    var sellCol="Sell "+lotTxt(wl.sellL)+" "+ks+" "+optLbl;
+    var sellCol="Sell "+lotTxt(wl.sellL)+" "+ks+" "+optLbl+spikeBadgeHtml(spikeInfo);
     var summaryGrid='<div class="srow single">'+
       '<span class="sc">'+buyCol+'</span>'+
       '<span class="sc">'+sellCol+'</span>'+
       '<span class="sc sc-muted">Gap '+gap+'</span>'+
       '<span class="sc">Ratio '+ratioStr+'</span>'+
       '<span class="sc">Credit '+sg(totCredit)+'</span>'+
-      '<span class="sc">'+(v!=null?'<span class="tag">₹'+rs(v)+'/lakh</span>':'')+'</span>'+
+      '<span class="sc">'+liqPillHtml(L[0],L[1])+'</span>'+
+      '<span class="sc">'+(v!=null?'<span class="tag">₹'+rs(v)+'/lakh</span>':'<span class="tag est">~₹'+rs(totCredit/estMg*100000)+'/lakh</span>')+'</span>'+
       '</div>';
 
-    return '<details data-k="'+key+'"'+(OPEN[key]?' open':'')+'><summary>'+summaryGrid+'</summary>'+
-      '<div class="g">'+
+    return '<details class="'+(spikeInfo?'spike-row':'')+'" data-k="'+key+'"'+(OPEN[key]?' open':'')+'><summary>'+summaryGrid+'</summary>'+
+      '<div class="exp-grid"><div class="g">'+
       '<span>Exact strikes &amp; lots</span><span>Buy '+lotTxt(wl.buyL)+' ('+rs(wl.buyL*lsz)+' qty) '+kb+' '+optLbl+' / Sell '+lotTxt(wl.sellL)+' ('+rs(wl.sellL*lsz)+' qty) '+ks+' '+optLbl+'</span>'+
       '<span>Bought &amp; sold vs spot</span><span>Buy '+(buyDistPct==null?'–':(buyDistPct>0?'+':'')+fx(buyDistPct,2)+'%')+' &bull; Sell '+(sellDistPct==null?'–':(sellDistPct>0?'+':'')+fx(sellDistPct,2)+'%')+'</span>'+
+      '<span>Spread % &amp; OI (lots)</span><span>Buy '+fx(spreadPctOf(L[0]),1)+'% (OI '+rs((L[0].oi||0)/lsz)+'L) &bull; Sell '+fx(spreadPctOf(L[1]),1)+'% (OI '+rs((L[1].oi||0)/lsz)+'L, Vol '+rs((L[1].vol||0)/lsz)+'L)</span>'+
       '<span>Ratio &amp; gap</span><span>'+ratioStr+' ('+wl.buyL+':'+wl.sellL+') &bull; '+gap+' pts</span>'+
       '<span>Net credit at traded lots</span><span>'+sg(totCredit)+'</span>'+
       '<span>Profit if expiry at '+ks+'</span><span>'+sg(maxProf)+'</span>'+
@@ -901,7 +1150,7 @@ function scanR(){
       '<span>Credit per ₹1 lakh margin</span><span>'+(v==null?'checking margin... (IV est ~₹'+rs(totCredit/estMg*100000)+')':'₹'+rs(v))+'</span>'+
       '<span>Net delta</span><span>'+(dl==null?'–':fx(dl,2)+' ('+fx(dl*MUL,1)+' units)')+'</span>'+
       '<span>IV buy / sell</span><span>'+fx(L[0].miv,1)+' / '+fx(L[1].miv,1)+'</span>'+
-      '</div>'+legsHtml({und:und,L:L,tags:tags,q:[1,-X],p:maxProf,estMg:estMg,estRaw:estRawD},MUL)+'</details>';
+      '</div>'+legsHtml({und:und,L:L,tags:tags,q:[1,-X],p:maxProf,estMg:estMg,estRaw:estRawD},MUL)+'</div></details>';
   }
 
   var cardsHtml=[];
@@ -912,10 +1161,10 @@ function scanR(){
       var va=pl(a.nB,mgOf(a.L,a.X2),a.X2),vb=pl(b.nB,mgOf(b.L,b.X2),b.X2);
       if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;return vb-va;
     });
-    var s1Html=det(base+"s1","ATM",r.nA,r.k0,r.k1,r.X,r.gap,r.L,r.tags);
+    var s1Html=det(base+"s1","ATM",r.nA,r.k0,r.k1,r.X,r.gap,r.L,r.tags,null);
     var laterList=[];
     sp.forEach(function(p){
-      var h=det(base+p.kb+"|"+p.M,"",p.nB,p.kb,p.ks,p.X2,r.gap,p.L,p.tags);
+      var h=det(base+p.kb+"|"+p.M,"",p.nB,p.kb,p.ks,p.X2,r.gap,p.L,p.tags,p.spike);
       if(h)laterList.push({html:h,v:pl(p.nB,mgOf(p.L,p.X2),p.X2)});
     });
     if(!s1Html&&!laterList.length)return;
@@ -924,6 +1173,7 @@ function scanR(){
     cardsHtml.push({
       best:bestV!=null?bestV:-Infinity,
       html:'<div class="c"><b>'+cardHead+'</b>'+
+        '<span class="tag mute" style="margin-left:6px">ATM Spd '+fx(spreadPctOf(r.L[1]),1)+'%</span>'+
         (bestV!=null?'<span class="tag" style="margin-left:6px">Best ₹'+rs(bestV)+'/lakh</span>':'')+
         (s1Html?s1Html:'')+
         laterList.slice(0,25).map(function(x){return x.html}).join("")+
@@ -933,23 +1183,27 @@ function scanR(){
   });
 
   cardsHtml.sort(function(a,b){return b.best-a.best});
-  if(HID||HIDU)msg.textContent=(HID?HID+" row(s) hidden (not above ₹"+rs(plk)+"/lakh). ":"")+(HIDU?HIDU+" row(s) checking margin in background...":"");
+  if(HID||HIDU||LIQ_SKIP1||LIQ_SKIP2){
+    msg.textContent=(HID?HID+" row(s) hidden (not above ₹"+rs(plk)+"/lakh). ":"")+
+      (HIDU?HIDU+" row(s) checking margin... ":"")+
+      ((LIQ_SKIP1||LIQ_SKIP2)?"[Liquidity Guard skipped "+LIQ_SKIP1+" Step-1 & "+LIQ_SKIP2+" Step-2 illiquid pairs]":"");
+  }
   if(!cardsHtml.length){
     if(!HIDU)msg.textContent=(msg.textContent+" No rows found strictly above ₹"+rs(plk)+"/lakh.").trim();
     autoCheck();return;
   }
-  out.innerHTML=cardsHtml.slice(0,20).map(function(x){return x.html}).join("");
+  out.innerHTML=colHeaderHtml(true)+cardsHtml.slice(0,20).map(function(x){return x.html}).join("");
   autoCheck();
 }
 
 /* ============================================================================
-   TWO-STAGE TIER SCANNER:
-   Strictly scans ONLY checked/default expiries & renders aligned invisible columns
+   TWO-STAGE TIER SCANNER WITH STEP 1 & STEP 2 LIQUIDITY + LTP SPIKE HIGHLIGHT
    ============================================================================ */
 function extractCandidates(und,rows,spot){
   var typ=val("typ"),optLbl=typ==="C"?"CE":"PE",dir=typ==="C"?1:-1;
   var MUL=qtyMulFor(und),bLots=baseLots(),lsz=lotSizeFor(und),plk=num(val("plk"));
   var candidates=[],seenKey={},kind=MODE==="R"?"R":"B",ci=calInfo(kind,und),cap=(plk!=null)?200:5;
+  var maxOiMap=calcMaxOiByExp(rows,und,typ);
 
   function wholeLots(X){
     var sc=scaleFactor([1,-X]);
@@ -970,7 +1224,7 @@ function extractCandidates(und,rows,spot){
     function inr(v,lo){return !(lo!=null&&v<lo)}
 
     Object.keys(by).forEach(function(e){
-      var m=by[e],ks=Object.keys(m).map(Number).sort(function(a,b){return a-b});
+      var m=by[e],ks=Object.keys(m).map(Number).sort(function(a,b){return a-b}),maxOi=maxOiMap[e]||0;
       if(!ks.length)return;
       var k0=ks.reduce(function(p,k){return Math.abs(k-spot)<Math.abs(p-spot)?k:p},ks[0]);
       var gaps=ks.map(function(k){return Math.round((k-k0)*dir*100)/100}).filter(function(d){return d>0});
@@ -978,6 +1232,8 @@ function extractCandidates(und,rows,spot){
         var k1=Math.round((k0+dir*gap)*100)/100;if(!m[k1])return;
         if(!withinSellDist(k1,spot))return;
         var a=m[k0],b=m[k1];if(a.ask==null||b.bid==null)return;
+        /* Step 1 Liquidity Guard */
+        if(!legLiquidStep(a,1,false,lsz,maxOi)||!legLiquidStep(b,1,true,lsz,maxOi))return;
         xs.forEach(function(X){
           var nA=a.ask-X*b.bid;
           if(!ok(nA,c1))return;
@@ -987,6 +1243,8 @@ function extractCandidates(und,rows,spot){
             var kS=Math.round((kb+dir*gap)*100)/100;if(!m[kS])return;
             if(!withinSellDist(kS,spot))return;
             var p=m[kb],q=m[kS];if(p.ask==null||q.bid==null)return;
+            /* Step 2 Liquidity Guard */
+            if(!legLiquidStep(p,2,false,lsz,maxOi)||!legLiquidStep(q,2,true,lsz,maxOi))return;
             ms.forEach(function(M){
               var X2=Math.floor(X*M*2+1e-9)/2;if(X2<=0)return;
               var uKey=e+"|"+kb+"|"+kS+"|"+X2;
@@ -1012,7 +1270,9 @@ function extractCandidates(und,rows,spot){
                 L:[p,q],tags:["Buy "+lotTxt(wl.buyL),"Sell "+lotTxt(wl.sellL)],q:[1,-X2],
                 legs:legs,estMg:estMg,estRaw:estRaw,optPlk:optPlk,estPlk:estPlk,exactPlk:exPlk,scorePlk:activePlk,dir:dir,
                 buyDistPct:(kb-spot)/spot*100,
-                sellDistPct:(kS-spot)/spot*100
+                sellDistPct:(kS-spot)/spot*100,
+                sellSpd:spreadPctOf(q),
+                spike:sellLegSpikeInfo(q)
               });
             });
           });
@@ -1024,14 +1284,14 @@ function extractCandidates(und,rows,spot){
     if(!spot){var f2=rows.filter(function(r){return r.und===und&&r.spot!=null})[0];if(f2)spot=f2.spot}
     var byB={};rows.forEach(function(r){if(r.und===und&&r.type===typ&&expLive(r.exp)&&isExpSelected(r.exp)){(byB[r.exp]=byB[r.exp]||{})[r.k]=r}});
     Object.keys(byB).forEach(function(e){
-      var ks=Object.keys(byB[e]).map(Number).sort(function(a,b){return a-b}),m=byB[e];
+      var ks=Object.keys(byB[e]).map(Number).sort(function(a,b){return a-b}),m=byB[e],maxOi=maxOiMap[e]||0;
       ks.forEach(function(k){
         if(!withinSellDist(k,spot))return;
         ks.forEach(function(lo){
           if(lo>=k)return;var w=k-lo,hi=k+w;if(w>maxw||!m[hi])return;
           if(!withinBuyDist(lo,spot)||!withinBuyDist(hi,spot))return;
           var a=m[lo],b=m[k],c=m[hi];
-          if(a.ask==null||b.bid==null||c.ask==null||b.bid<=0)return;
+          if(!legLiquidStep(a,2,false,lsz,maxOi)||!legLiquidStep(b,2,true,lsz,maxOi)||!legLiquidStep(c,2,false,lsz,maxOi))return;
           var deb=a.ask-2*b.bid+c.ask,cash=-deb*MUL;if(deb>=w)return;
           if(clo!=null&&cash<clo)return;if(chi!=null&&cash>chi)return;
           var ratio=deb>0?(w-deb)/deb:Infinity;if(deb>0&&ratio<minr)return;
@@ -1048,7 +1308,9 @@ function extractCandidates(und,rows,spot){
             lo:lo,k:k,hi:hi,w:w,deb:deb,cash:cash,ratio:ratio,maxProf:maxProf,MUL:MUL,bLots:bLots,
             L:[a,b,c],tags:["Buy "+lotTxt(bLots),"Sell "+lotTxt(2*bLots),"Buy "+lotTxt(bLots)],q:[1,-2,1],
             legs:legs,estMg:estMg,estRaw:estRaw,optPlk:optPlk,estPlk:estPlk,exactPlk:exPlk,scorePlk:activePlk,
-            sellDistPct:spot?((k-spot)/spot*100):null
+            sellDistPct:spot?((k-spot)/spot*100):null,
+            sellSpd:spreadPctOf(b),
+            spike:sellLegSpikeInfo(b)
           });
         });
       });
@@ -1095,21 +1357,37 @@ function renderTierLeaderboard(stageMsg){
   });
 
   visible.sort(function(a,b){
-    var aEx=a.exactPlk!=null?1:0, bEx=b.exactPlk!=null?1:0;
-    if(aEx!==bEx)return bEx-aEx;
-    return b.scorePlk-a.scorePlk;
+    if(SORT_COL==="plk"){
+      var aEx=a.exactPlk!=null?1:0, bEx=b.exactPlk!=null?1:0;
+      if(aEx!==bEx)return bEx-aEx;
+      return (a.scorePlk-b.scorePlk)*(-SORT_DIR);
+    }
+    var va,vb;
+    if(SORT_COL==="und"){va=a.und;vb=b.und;return va<vb?SORT_DIR:(va>vb?-SORT_DIR:0)}
+    if(SORT_COL==="exp"){va=ek(a.e);vb=ek(b.e);return va<vb?SORT_DIR:(va>vb?-SORT_DIR:0)}
+    if(SORT_COL==="kb"){va=a.isB?a.lo:a.kb;vb=b.isB?b.lo:b.kb}
+    else if(SORT_COL==="ks"){va=a.isB?a.k:a.ks;vb=b.isB?b.k:b.ks}
+    else if(SORT_COL==="gap"){va=a.isB?a.w:a.gap;vb=b.isB?b.w:b.gap}
+    else if(SORT_COL==="ratio"){va=a.isB?2:a.X;vb=b.isB?2:b.X}
+    else if(SORT_COL==="credit"){va=a.isB?a.cash:a.totCredit;vb=b.isB?b.cash:b.totCredit}
+    else if(SORT_COL==="spd"){va=a.sellSpd||0;vb=b.sellSpd||0}
+    else {va=a.scorePlk;vb=b.scorePlk}
+    return (va-vb)*(-SORT_DIR);
   });
+
   var totalVis=visible.length;visible=visible.slice(0,150);
 
   if(stageMsg!=null)msg.textContent=stageMsg+(hiddenBelow?" ("+hiddenBelow+" filtered out below ₹"+rs(plk)+"/lakh)":"");
 
   if(!visible.length){
-    out.innerHTML=noteHtml()+'<div class="sub">No setups currently above target within your bought/sold strike % limits.</div>';
+    out.innerHTML=noteHtml()+'<div class="sub">No setups currently above target within your bought/sold strike % and liquidity limits.</div>';
     return;
   }
 
   var bdLim=minBuyDistFrac();
-  out.innerHTML=noteHtml()+'<div class="sub" style="margin-bottom:6px">Showing '+visible.length+(totalVis>visible.length?' of '+totalVis:'')+' setups across the scanned symbols (selling leg ≤ '+fx(maxSellDistFrac()*100,1)+'%'+(bdLim!=null?', bought leg ≥ '+fx(bdLim*100,1)+'%':'')+' from spot, ranked highest to lowest ₹/lakh):</div>'+
+  out.innerHTML=noteHtml()+
+  '<div class="sub" style="margin-bottom:4px">Showing '+visible.length+(totalVis>visible.length?' of '+totalVis:'')+' setups (selling leg ≤ '+fx(maxSellDistFrac()*100,1)+'%'+(bdLim!=null?', bought leg ≥ '+fx(bdLim*100,1)+'%':'')+' from spot • Click any column header below to sort):</div>'+
+  colHeaderHtml(false)+
   visible.map(function(r,idx){
     var isExact=r.exactPlk!=null;
     var badge=isExact
@@ -1121,15 +1399,16 @@ function renderTierLeaderboard(stageMsg){
         '<span class="sym-badge">#'+(idx+1)+' '+r.und+'</span>'+
         '<span class="sc">'+expLabel(r.e)+'</span>'+
         '<span class="sc">Buy '+lotTxt(r.bLots)+' '+r.lo+'/'+r.hi+' '+r.optLbl+'</span>'+
-        '<span class="sc">Sell '+lotTxt(2*r.bLots)+' '+r.k+' '+r.optLbl+'</span>'+
+        '<span class="sc">Sell '+lotTxt(2*r.bLots)+' '+r.k+' '+r.optLbl+spikeBadgeHtml(r.spike)+'</span>'+
         '<span class="sc sc-muted">Gap '+r.w+'</span>'+
         '<span class="sc">Ratio 1:2:1</span>'+
         '<span class="sc">Credit '+sg(r.cash)+'</span>'+
+        '<span class="sc">'+liqPillHtml(r.L[0],r.L[1])+'</span>'+
         '<span class="sc">'+badge+'</span>'+
         '</div>';
-      return '<div class="c"><details data-k="'+r.id+'"'+(OPEN[r.id]?' open':'')+'><summary>'+bSummary+'</summary>'+
-        '<div class="g"><span>Max profit</span><span>'+sg(r.maxProf)+'</span><span>Profit/risk</span><span>'+(r.ratio===Infinity?'credit':fx(r.ratio))+'</span><span>Sold strike vs spot</span><span>'+(r.sellDistPct==null?'–':(r.sellDistPct>0?'+':'')+fx(r.sellDistPct,2)+'%')+'</span></div>'+
-        legsHtml({und:r.und,L:r.L,tags:r.tags,q:r.q,p:r.maxProf,estMg:r.estMg,estRaw:r.estRaw},r.MUL)+'</details></div>';
+      return '<div class="c'+(r.spike?' spike-card':'')+'"><details data-k="'+r.id+'"'+(OPEN[r.id]?' open':'')+'><summary>'+bSummary+'</summary>'+
+        '<div class="exp-grid"><div class="g"><span>Max profit</span><span>'+sg(r.maxProf)+'</span><span>Profit/risk</span><span>'+(r.ratio===Infinity?'credit':fx(r.ratio))+'</span><span>Sold strike vs spot</span><span>'+(r.sellDistPct==null?'–':(r.sellDistPct>0?'+':'')+fx(r.sellDistPct,2)+'%')+'</span></div>'+
+        legsHtml({und:r.und,L:r.L,tags:r.tags,q:r.q,p:r.maxProf,estMg:r.estMg,estRaw:r.estRaw},r.MUL)+'</div></details></div>';
     }
 
     var wl=r.wl,ratioStr="1:"+r.X;
@@ -1137,21 +1416,23 @@ function renderTierLeaderboard(stageMsg){
       '<span class="sym-badge">#'+(idx+1)+' '+r.und+'</span>'+
       '<span class="sc">'+expLabel(r.e)+'</span>'+
       '<span class="sc">Buy '+lotTxt(wl.buyL)+' '+r.kb+' '+r.optLbl+'</span>'+
-      '<span class="sc">Sell '+lotTxt(wl.sellL)+' '+r.ks+' '+r.optLbl+'</span>'+
+      '<span class="sc">Sell '+lotTxt(wl.sellL)+' '+r.ks+' '+r.optLbl+spikeBadgeHtml(r.spike)+'</span>'+
       '<span class="sc sc-muted">Gap '+r.gap+'</span>'+
       '<span class="sc">Ratio '+ratioStr+'</span>'+
       '<span class="sc">Credit '+sg(r.totCredit)+'</span>'+
+      '<span class="sc">'+liqPillHtml(r.L[0],r.L[1])+'</span>'+
       '<span class="sc">'+badge+'</span>'+
       '</div>';
     var dl=(r.L[0].d!=null&&r.L[1].d!=null)?(r.L[0].d-r.X*r.L[1].d)*wl.sc:null;
 
-    return '<div class="c">'+
+    return '<div class="c'+(r.spike?' spike-card':'')+'">'+
       '<details data-k="'+r.id+'"'+(OPEN[r.id]?' open':'')+'>'+
       '<summary>'+summaryGrid+'</summary>'+
-      '<div class="g">'+
+      '<div class="exp-grid"><div class="g">'+
       '<span>Underlying &amp; Spot</span><span>'+r.und+' (Spot '+fx(r.spot,2)+', ATM '+r.k0+', Lot size '+r.lsz+')</span>'+
       '<span>Exact strikes &amp; lots</span><span>Buy '+lotTxt(wl.buyL)+' ('+rs(wl.buyL*r.lsz)+' qty) '+r.kb+' '+r.optLbl+' / Sell '+lotTxt(wl.sellL)+' ('+rs(wl.sellL*r.lsz)+' qty) '+r.ks+' '+r.optLbl+'</span>'+
       '<span>Bought &amp; sold vs spot</span><span>Buy '+(r.buyDistPct>0?'+':'')+fx(r.buyDistPct,2)+'% &bull; Sell '+(r.sellDistPct>0?'+':'')+fx(r.sellDistPct,2)+'%</span>'+
+      '<span>Spread % &amp; OI (lots)</span><span>Buy '+fx(spreadPctOf(r.L[0]),1)+'% (OI '+rs((r.L[0].oi||0)/r.lsz)+'L) &bull; Sell '+fx(spreadPctOf(r.L[1]),1)+'% (OI '+rs((r.L[1].oi||0)/r.lsz)+'L, Vol '+rs((r.L[1].vol||0)/r.lsz)+'L)</span>'+
       '<span>Ratio &amp; gap</span><span>'+ratioStr+' ('+wl.buyL+':'+wl.sellL+') &bull; '+r.gap+' pts</span>'+
       '<span>Net credit at traded lots</span><span>'+sg(r.totCredit)+'</span>'+
       '<span>Profit if expiry at '+r.ks+'</span><span>'+sg(r.maxProf)+'</span>'+
@@ -1159,7 +1440,7 @@ function renderTierLeaderboard(stageMsg){
       '<span>Credit per ₹1 lakh margin</span><span>'+(isExact?'₹'+rs(r.exactPlk)+' (Exact Fyers SPAN)':'~₹'+rs(r.estPlk)+' (IV-Adjusted Method B Estimate)')+'</span>'+
       '<span>Net delta</span><span>'+(dl==null?'–':fx(dl,2)+' ('+fx(dl*r.MUL,1)+' units)')+'</span>'+
       '<span>IV buy / sell</span><span>'+fx(r.L[0].miv,1)+' / '+fx(r.L[1].miv,1)+'</span>'+
-      '</div>'+legsHtml({und:r.und,L:r.L,tags:r.tags,q:r.q,p:r.maxProf,estMg:r.estMg,estRaw:r.estRaw},r.MUL)+'</details></div>';
+      '</div>'+legsHtml({und:r.und,L:r.L,tags:r.tags,q:r.q,p:r.maxProf,estMg:r.estMg,estRaw:r.estRaw},r.MUL)+'</div></details></div>';
   }).join("");
 }
 
@@ -1168,7 +1449,7 @@ function noteHtml(){return TIER_NOTE?'<div class="sub" style="margin-bottom:6px"
 function esc(x){return String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
 function ageTxt(t){var m=Math.round((Date.now()-t)/60000);return m<1?"under 1 min old":m+" min old"}
 function waitMargin(){var n=0;function go(){if(canMargin()||TIER_ABORT||n++>100)return Promise.resolve();return wait(1000).then(go)}return go()}
-/* One symbol: chain (and chosen extra expiries). Reuses data fetched in the last few minutes instead of spending requests again */
+
 function fetchSymbolRows(und,base){
   var c=CHC[und];
   if(c&&Date.now()-c.t<(mkt()?300000:3600000)&&c.stk===val("stk")){
@@ -1223,7 +1504,7 @@ function startTierScan(){
   function finish(){
     var okN=TIER_ITEMS.filter(function(x){var m=MG[mkey(x.legs)];return m&&m.total>0}).length,parts=[];
     parts.push("Fetched "+S1.ok+" of "+syms.length+" symbols"+(S1.fail?" ("+S1.fail+" failed; first: "+esc(S1.first)+")":"")+(S1.empty?"; "+S1.empty+" had no expiries":"")+"; data "+ageTxt(S1.oldest)+(S1.cached?" ("+S1.cached+" reused from the last few minutes)":""));
-    parts.push(TIER_ITEMS.length+" candidates passed the calibrated filter; "+okN+" checked with exact Fyers margin"+(S2.pruned?"; "+S2.pruned+" ruled out as the estimate improved":"")+(S2.fail?"; "+S2.fail+" margin errors (first: "+esc(S2.first)+")":""));
+    parts.push(TIER_ITEMS.length+" candidates passed Step 1/2 Liquidity + calibrated filter; "+okN+" checked with exact Fyers margin"+(S2.pruned?"; "+S2.pruned+" ruled out as the estimate improved":"")+(S2.fail?"; "+S2.fail+" margin errors (first: "+esc(S2.first)+")":""));
     if(S1.auth)parts.push("Fyers rejected the token. Log in again, then rescan.");
     if(S2.halt)parts.push("Margin checking stopped early: "+(S2.auth?"token rejected, log in again":(S2.dailyStop?"daily margin limit reached":"the margin service kept failing"))+". Rows not yet checked are tagged est.");
     if(S2.limitHit)parts.push("Stopped at your limit of "+maxChecks+" exact checks: "+S2.left+" candidates left unchecked (raise the limit in Settings to check them)");
@@ -1252,7 +1533,7 @@ function startTierScan(){
             S1.ok++;if(res.cached)S1.cached++;if(res.t<S1.oldest)S1.oldest=res.t;
             noteLiquidity(und,res.rows,res.spot);
             var cands=extractCandidates(und,res.rows,res.spot);
-            if(cands.length){TIER_ITEMS=TIER_ITEMS.concat(cands);renderTierLeaderboard("Stage 1: "+TIER_ITEMS.length+" candidates so far ("+(idx+1)+"/"+syms.length+" scanned)...")}
+            if(cands.length){TIER_ITEMS=TIER_ITEMS.concat(cands);renderTierLeaderboard("Stage 1: "+TIER_ITEMS.length+" liquid candidates so far ("+(idx+1)+"/"+syms.length+" scanned)...")}
           }).catch(function(err){
             S1.fail++;if(!S1.first)S1.first=und+": "+((err&&err.message)||"error");
             if(err&&err.auth){S1.auth=true;TIER_ABORT=true;return}
@@ -1369,7 +1650,6 @@ function fy(url){
     if(j.s!=="ok"&&j.code!==200){e=new Error((j.message||"error")+" (code "+j.code+")");e.auth=isAuthErr(e.message);throw e}
     return j})});
 }
-/* Like fy(), but waits out the per-minute guard instead of failing, so symbols are never silently skipped */
 function fyWait(url){
   var tries=0;
   function go(){return fy(url).catch(function(err){if(err&&err.guard&&!err.daily&&tries++<45)return wait(1500).then(go);throw err})}
@@ -1427,7 +1707,7 @@ document.getElementById("live").addEventListener("click",function(){
   load();
   if(n>0)TMR=setInterval(load,n*1000);
 });
-/* ---- Fyers login: the Secret ID is never stored; the token is kept only until the next 6:30 AM IST ---- */
+
 var PEND_CODE=null;
 function flmsg(t){document.getElementById("flmsg").textContent=t}
 function nextTokenExpiry(){var n=new Date(),t=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),1,0,0);if(t<=n.getTime())t+=86400000;return t}
@@ -1454,7 +1734,6 @@ function sha256hex(x){return crypto.subtle.digest("SHA-256",new TextEncoder().en
     try{localStorage.setItem("bt_state",st);localStorage.setItem("bt_return",location.origin+location.pathname)}catch(e){}
     location.href="https://api-t1.fyers.in/api/v3/generate-authcode?client_id="+encodeURIComponent(app)+"&redirect_uri="+encodeURIComponent(red)+"&response_type=code&state="+st;
   });
-  /* coming back from Fyers (directly, or relayed by api-test.html) */
   var q=new URLSearchParams(location.search),code=q.get("auth_code");
   if(code){
     var ok=q.get("state")===localStorage.getItem("bt_state");
@@ -1466,7 +1745,7 @@ function sha256hex(x){return crypto.subtle.digest("SHA-256",new TextEncoder().en
   }
   document.getElementById("ffin").addEventListener("click",function(){
     var box=document.getElementById("fs"),sec=box.value.trim(),app=val("fa");
-    box.value="";   /* wipe the Secret from the screen as soon as it is read */
+    box.value="";
     if(!PEND_CODE){flmsg("No login in progress. Tap Log in to Fyers first.");return}
     if(!sec||!app){flmsg("Enter the Secret ID (and the App ID).");return}
     flmsg("Finishing login...");
@@ -1505,10 +1784,10 @@ function sha256hex(x){return crypto.subtle.digest("SHA-256",new TextEncoder().en
     if(savedTier){document.getElementById("tier").value=savedTier}
     var savedPlan=localStorage.getItem("sc_plan");
     if(savedPlan)document.getElementById("plan").value=savedPlan;
-    var savedBd=localStorage.getItem("sc_minbd");
-    if(savedBd!=null)document.getElementById("minbd").value=savedBd;
-    var savedSd=localStorage.getItem("sc_maxsd");
-    if(savedSd!=null&&savedSd!=="")document.getElementById("maxsd").value=savedSd;
+    ["minbd","maxsd","sp1","oi1","vol1","sp2","oi2","vol2","bsz2","reloi","spikepct"].forEach(function(id){
+      var sv=localStorage.getItem("sc_"+id);
+      if(sv!=null&&sv!=="")document.getElementById(id).value=sv;
+    });
   }catch(e){}
   populateSymbolDatalist();
   ensureLot(val("und").toUpperCase());
@@ -1555,6 +1834,14 @@ function mfetch(legs,undOverride,rawEstMg,kind){
   .catch(function(e){if(e instanceof TypeError)throw new Error("Could not reach Fyers margin service.");throw e});
 }
 document.getElementById("out").addEventListener("click",function(e){
+  var srtEl=e.target.closest("[data-srt]");
+  if(srtEl){
+    var col=srtEl.getAttribute("data-srt");
+    if(SORT_COL===col)SORT_DIR=-SORT_DIR;
+    else{SORT_COL=col;SORT_DIR=-1}
+    if(TIER_MODE)renderTierLeaderboard();else scan();
+    return;
+  }
   var b=e.target.closest(".dp");
   if(b){b.textContent="Loading...";loadDepth(b.getAttribute("data-s").split(",")).then(function(){if(TIER_MODE)renderTierLeaderboard();else scan()}).catch(function(err){b.textContent="Failed: "+err.message});return}
   b=e.target.closest(".mgb");
