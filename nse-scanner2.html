@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NSE options scanner</title>
+<style>
+:root{
+  --bg:#f3f5f2;--ink:#14201a;--mute:#5b6a61;--card:#fff;--line:#d5ddd6;--acc:#0e6b4f;--bad:#a63a2a;--good:#0e6b4f;--warn:#b57c1e;
+  --rail-w:46px;--drawer-w:360px;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#101814;--ink:#e6efe9;--mute:#8fa297;--card:#18231d;--line:#2a3a31;--acc:#4cc79a;--bad:#e08a79;--good:#4cc79a;--warn:#e5b55f;color-scheme:dark
+  }
+}
+*{box-sizing:border-box}
+a{color:var(--acc)}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding:14px calc(var(--rail-w) + 14px) 24px 14px;
+  transition:padding-right .2s ease;
+}
+body.drawer-open{padding-right:calc(var(--rail-w) + var(--drawer-w) + 14px)}
+@media (max-width:760px){
+  body.drawer-open{padding-right:calc(var(--rail-w) + 14px)}
+}
+
+/* Main workspace */
+.topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+h1{font-size:20px;margin:0}
+.sub{color:var(--mute);margin:2px 0 0;font-size:13px}
+.quickbar{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;
+  background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px
+}
+.quickbar .qitem{flex:1 1 130px;min-width:110px}
+label{font-size:12px;color:var(--mute);display:block;margin-bottom:3px}
+input,select,textarea{
+  width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;
+  background:var(--card);color:var(--ink)
+}
+textarea{height:90px;font:12px monospace}
+button{
+  font-size:14px;padding:8px 14px;border:0;border-radius:7px;background:var(--acc);color:var(--bg);
+  font-weight:600;cursor:pointer
+}
+button.sec{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+button.sm{padding:6px 10px;font-size:13px}
+
+/* Right TradingView-style rail & drawer */
+.tv-rail{
+  position:fixed;top:0;right:0;bottom:0;width:var(--rail-w);
+  background:var(--card);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:8px;z-index:1001
+}
+.rail-btn{
+  width:34px;height:34px;padding:0;border-radius:7px;background:transparent;color:var(--mute);
+  border:1px solid transparent;display:flex;align-items:center;justify-content:center;position:relative
+}
+.rail-btn:hover{background:var(--bg);color:var(--ink)}
+.rail-btn.active{background:var(--bg);color:var(--acc);border-color:var(--line)}
+.rail-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.tv-drawer{
+  position:fixed;top:0;right:var(--rail-w);bottom:0;width:var(--drawer-w);max-width:calc(100vw - var(--rail-w));
+  background:var(--card);border-left:1px solid var(--line);
+  box-shadow:-6px 0 24px rgba(0,0,0,.18);
+  transform:translateX(100%);visibility:hidden;
+  transition:transform .2s ease,visibility .2s ease;
+  z-index:1000;display:flex;flex-direction:column
+}
+.tv-drawer.open{transform:translateX(0);visibility:visible}
+.drawer-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:15px
+}
+.drawer-body{padding:12px 14px;overflow-y:auto;flex:1}
+.sec-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:14px 0 6px;font-weight:700}
+.sec-title:first-child{margin-top:0}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.seg{display:flex;gap:6px;margin:6px 0 10px}
+.seg button{flex:1;padding:8px;font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.seg button.on{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.chip{display:inline-flex;align-items:center;padding:5px 10px;border:1px solid var(--line);border-radius:99px;margin:0 5px 5px 0;font-size:13px;color:var(--ink);background:var(--bg);cursor:pointer}
+.chip input{width:auto;margin-right:5px}
+
+/* Cards & output */
+#msg{margin:8px 0;font-size:13px;color:var(--bad);white-space:pre-wrap}
+#st{font-size:13px;color:var(--mute);margin:4px 0}
+.c{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:11px;margin:8px 0}
+.c b{font-size:15px}
+.g{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;margin-top:6px}
+.g span:nth-child(odd){color:var(--mute)}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;border:1px solid var(--good);color:var(--good);font-size:12px;font-weight:600;white-space:nowrap}
+.tag.est{border-color:var(--warn);color:var(--warn)}
+.tag.mute{border-color:var(--line);color:var(--mute);font-weight:500}
+.sym-badge{display:inline-block;padding:3px 8px;border-radius:6px;background:var(--acc);color:var(--bg);font-weight:700;font-size:12px;text-align:center;white-space:nowrap}
+details{border-top:1px solid var(--line);padding:8px 0;margin-top:6px}
+.c > details:first-child{border-top:0;padding:2px 0;margin-top:0}
+details summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none}
+details summary::-webkit-details-marker{display:none}
+
+/* Invisible Column Alignment for Scanner Rows */
+.srow{
+  display:grid;
+  grid-template-columns: 120px 150px 165px 175px 95px 95px 135px auto;
+  align-items:center;
+  column-gap:10px;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.srow.single{
+  grid-template-columns: 175px 180px 95px 95px 135px auto;
+}
+.srow .sc{overflow:hidden;text-overflow:ellipsis}
+.srow .sc-muted{color:var(--mute);font-weight:500;font-size:13px}
+@media (max-width:1100px){
+  .srow,.srow.single{display:flex;flex-wrap:wrap;gap:6px 12px}
+}
+
+.bks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.bh{font-weight:600;font-size:12px;margin-bottom:2px;white-space:nowrap}
+.bt,.bk{display:flex;justify-content:space-between;font-size:12px;padding:1px 3px}
+.bt{color:var(--mute)}
+.bk{background:linear-gradient(to left,var(--bgc) var(--w),transparent var(--w))}
+.bk.a{--bgc:rgba(200,70,50,.28);color:var(--bad)}
+.bk.b{--bgc:rgba(20,140,100,.28);color:var(--good)}
+.bm{display:flex;flex-direction:column;padding:4px 3px;margin:2px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px;color:var(--mute)}
+.bm b{font-size:14px;color:var(--ink)}
+</style>
+</head>
+<body>
+
+<!-- Main Clean View -->
+<div class="topbar">
+  <div>
+    <h1>NSE options scanner</h1>
+    <div class="sub" id="fut">Weekly &amp; Current Month default (Next Month optional) • Sold strike ≤ 29.5% from spot</div>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <button id="live">Start live</button>
+    <button id="scanTierBtn" class="sec" title="Stage 1: fetch chains and keep every setup that could still reach your ₹/lakh. Stage 2: exact Fyers margin on every survivor.">Scan Tier</button>
+    <button id="go" class="sec">Scan pasted</button>
+  </div>
+</div>
+
+<div class="quickbar">
+  <div class="qitem">
+    <label for="plk">Show only above (₹ / lakh)</label>
+    <input id="plk" type="number" inputmode="decimal" placeholder="e.g. 500">
+  </div>
+  <div class="qitem" style="max-width:185px">
+    <label for="tier">Liquidity Tier (measured)</label>
+    <select id="tier">
+      <option value="ALL">All F&amp;O Symbols</option>
+      <option value="1" selected>Tier 1: High Liq (~50)</option>
+      <option value="2">Tier 2: Med Liq (~75)</option>
+      <option value="3">Tier 3: Low Liq (Rest)</option>
+    </select>
+  </div>
+  <div class="qitem">
+    <label for="und">Underlying (<span id="symCnt">50</span> • blank = Tier scan)</label>
+    <input id="und" list="ul" value="NIFTY" placeholder="Blank = scan whole tier" autocapitalize="characters" autocomplete="off"><datalist id="ul"></datalist>
+  </div>
+  <div class="qitem" style="max-width:110px">
+    <label for="typ">Side</label>
+    <select id="typ"><option value="C">Calls</option><option value="P">Puts</option></select>
+  </div>
+  <div class="qitem" style="max-width:135px">
+    <label for="mode_q">Strategy</label>
+    <select id="mode_q"><option value="R">Ratio spread</option><option value="B">Butterfly</option></select>
+  </div>
+</div>
+
+<div id="st"></div>
+<div id="msg"></div>
+<div id="out"></div>
+
+<!-- TradingView-style Right Toolbar -->
+<div class="tv-rail" aria-label="Scanner tools">
+  <button class="rail-btn" id="btnDrawer" title="Scanner Settings (Bookmark Panel)">
+    <svg viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>
+  </button>
+</div>
+
+<!-- Slide-out Settings Drawer -->
+<aside class="tv-drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <span>Scanner Settings</span>
+    <button class="sec sm" id="closeDrawer" style="padding:4px 9px">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="sec-title">Strategy &amp; Market</div>
+    <div class="row">
+      <div class="sub" style="grid-column:1/-1">Symbol, tier, side, strategy and the ₹/lakh filter are in the top bar (one control each). Everything below applies to every scan.</div>
+      <div style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span class="sub" id="mstInfo">Master cache: checking...</span>
+        <button type="button" class="sec sm" id="refreshMst">Refresh F&amp;O list</button>
+      </div>
+      <div style="grid-column:1/-1"><label>Expiries (Weekly &amp; Cur Month default; check Next Month to load it)</label><div id="expbox" class="sub">Paste or load data first.</div></div>
+      <div><label for="spot">Spot price (optional)</label><input id="spot" type="number" inputmode="decimal"></div>
+      <div><label for="mul">Base lots (buy side)</label><input id="mul" type="text" inputmode="decimal" value="1"></div>
+      <div style="grid-column:1/-1">
+        <label for="minbd">Min bought strike % from spot (0 or blank = no min)</label>
+        <input id="minbd" type="number" step="0.1" inputmode="decimal" placeholder="e.g. 2 (buy leg at least X% away from spot)">
+      </div>
+      <div style="grid-column:1/-1">
+        <label for="maxsd">Max sold strike % from spot (default 29.5%)</label>
+        <input id="maxsd" type="number" step="0.1" inputmode="decimal" value="29.5">
+      </div>
+    </div>
+
+    <div id="pb" style="display:none">
+      <div class="sec-title">Butterfly Parameters</div>
+      <div class="row">
+        <div><label for="wid">Max wing width (0 = all)</label><input id="wid" type="number" inputmode="decimal" value="0"></div>
+        <div><label for="rat">Min profit/risk</label><input id="rat" type="number" inputmode="decimal" value="2"></div>
+        <div><label for="clo">Cost from</label><input id="clo" type="text" placeholder="e.g. -50"></div>
+        <div><label for="chi">Cost to</label><input id="chi" type="text" placeholder="e.g. 10"></div>
+        <div style="grid-column:1/-1"><label for="srt">Butterfly sort</label><select id="srt"><option value="rom">Credit / Return on margin</option><option value="ratio">Profit/risk</option></select></div>
+      </div>
+    </div>
+
+    <div id="pr">
+      <div class="sec-title">Ratio Spread Parameters</div>
+      <div class="row">
+        <div><label for="xm">Max ATM ratio</label><input id="xm" type="number" inputmode="decimal" value="7"></div>
+        <div><label for="mx">Later ratio % (0 = 10..100)</label><input id="mx" type="number" inputmode="decimal" value="95"></div>
+        <div><label for="c1">Step 1 cost</label><select id="c1"><option value="debit">Debit</option><option value="credit">Credit</option><option value="any">Any</option></select></div>
+        <div><label for="c2">Later strikes cost</label><select id="c2"><option value="credit">Credit</option><option value="debit">Debit</option><option value="any">Any</option></select></div>
+        <div style="grid-column:1/-1"><label for="s2lo">Min inflow</label><input id="s2lo" type="text" placeholder="e.g. 0"></div>
+      </div>
+    </div>
+
+    <div class="sec-title">Margin &amp; Per-Lakh Filter</div>
+    <div class="row">
+      <div><label for="prd">Product</label><select id="prd"><option value="MARGIN">Overnight (MARGIN)</option><option value="INTRADAY">Intraday</option></select></div>
+      <div><label for="amg">Auto-check margin</label><select id="amg"><option value="1" selected>On</option><option value="0">Off</option></select></div>
+      <div><label for="plan">Fyers plan</label><select id="plan"><option value="std">Standard (5/s, 50/min, 5,000/day)</option><option value="prime">Prime (10/s, 500/min, 5,00,000/day)</option></select></div>
+      <div><label for="mck">Max exact margin checks per scan (blank = all)</label><input id="mck" type="number" inputmode="numeric" value="300"></div>
+      <div style="grid-column:1/-1"><label for="mpm">Max checks / min</label><input id="mpm" type="number" inputmode="numeric" value="20"></div>
+    </div>
+
+    <div class="sec-title">Fyers API &amp; Feed</div>
+    <div class="row">
+      <div><label for="fa">Fyers App ID</label><input id="fa" autocomplete="off"></div>
+      <div><label for="ft">Access token (fills in automatically after login)</label><input id="ft" type="password" autocomplete="off"></div>
+      <div style="grid-column:1/-1"><label for="fr">Redirect URL (must match the one in your Fyers app)</label><input id="fr" autocomplete="off"></div>
+      <div style="grid-column:1/-1"><button id="flogin" type="button">Log in to Fyers (gets today's token)</button></div>
+      <div id="fsBox" style="display:none;grid-column:1/-1"><label for="fs">Secret ID (typed each login, never saved)</label><input id="fs" type="password" autocomplete="off"><button id="ffin" type="button" class="sec" style="margin-top:6px">Finish login</button></div>
+      <div style="grid-column:1/-1" class="sub" id="flmsg"></div>
+      <div><label for="stk">Strikes each side</label><select id="stk"><option>10</option><option>15</option><option>20</option><option selected>30</option><option>50</option></select></div>
+      <div><label for="ref">Refresh interval</label><select id="ref"><option value="0">Off</option><option value="15">15 sec</option><option value="20">20 sec</option><option value="30" selected>30 sec</option><option value="60">60 sec</option></select></div>
+    </div>
+    <div class="sub" id="rq" style="margin:6px 0"></div>
+
+    <div class="sec-title">Diagnostics</div>
+    <details id="diagBox"><summary>Show scan counters, estimator accuracy and the last raw Fyers replies</summary><pre id="diagOut" style="white-space:pre-wrap;word-break:break-all;font-size:11px;max-height:260px;overflow:auto"></pre></details>
+
+    <div class="sec-title">Offline Pasted Data</div>
+    <textarea id="inp" placeholder="Optional: paste raw Fyers option chain JSON here"></textarea>
+  </div>
+</aside>
+
+<script>
+/* 15-Day Cache Constant */
+var CACHE_15D = 15 * 86400 * 1000;
+
+/* Curated Liquidity Tiers for NSE/BSE F&O Option Chains */
+var TIER1_SYMS = [
+  "NIFTY","BANKNIFTY","SENSEX","FINNIFTY","MIDCPNIFTY",
+  "RELIANCE","HDFCBANK","ICICIBANK","SBIN","INFY","TCS","TATAMOTORS","BHARTIARTL","AXISBANK","KOTAKBANK",
+  "LT","BAJFINANCE","MARUTI","M&M","SUNPHARMA","ITC","TATASTEEL","HAL","BEL","ADANIENT",
+  "ADANIPORTS","TRENT","DIXON","BSE","ETERNAL","ZOMATO","NTPC","POWERGRID","ONGC","COALINDIA",
+  "HINDALCO","VEDL","JSWSTEEL","DLF","INDIGO","BAJAJ-AUTO","HEROMOTOCO","TITAN","ULTRACEMCO","ASIANPAINT",
+  "HCLTECH","WIPRO","TECHM","INDUSINDBK","BAJAJFINSV"
+];
+
+var TIER2_SYMS = [
+  "PFC","RECLTD","TATAPOWER","BANKBARODA","CANBK","PNB","CHOLAFIN","SHRIRAMFIN","APOLLOHOSP","DIVISLAB",
+  "CIPLA","DRREDDY","LUPIN","AUROPHARMA","BHEL","IRCTC","POLYCAB","PERSISTENT","COFORGE","LTIM",
+  "MPHASIS","MCX","ANGELONE","CDSL","OFSS","KPITTECH","TATAELXSI","SIEMENS","ABB","CUMMINSIND",
+  "CGPOWER","HAVELLS","VOLTAS","BLUESTARCO","AMBUJACEM","GRASIM","SHREECEM","ACC","PIDILITIND","BERGEPAINT",
+  "GODREJCP","DABUR","MARICO","BRITANNIA","NESTLEIND","TATACONSUM","COLPAL","VBL","UNITDSPR","PAGEIND",
+  "EICHERMOT","TVSMOTOR","ASHOKLEY","BHARATFORG","MOTHERSON","EXIDEIND","BALKRISIND","MRF","APOLLOTYRE","BOSCHLTD",
+  "GAIL","IOC","BPCL","HPCL","PETRONET","IGL","MGL","NMDC","JINDALSTEL","SAIL",
+  "NATIONALUM","HINDZINC","IRFC","RVNL","MAZDOCK","COCHINSHIP","BDL","CONCOR","GMRAIRPORT","INDHOTEL",
+  "JIOFIN","PAYTM","NYKAA","POLICYBZR","DELHIVERY","IDFCFIRSTB","FEDERALBNK","AUBANK","BANDHANBNK","RBLBANK",
+  "MUTHOOTFIN","MANAPPURAM","LICHSGFIN","SBILIFE","HDFCLIFE","ICICIPRULI","ICICIGI","SBICARD","HDFCAMC","GODREJPROP",
+  "OBEROIRLTY","PRESTIGE","LODHA","PHOENIXLTD","ASTRAL","SUPREMEIND","PIIND","UPL","SRF","DEEPAKNTR"
+];
+
+var TIER3_FALLBACK = [
+  "ABBOTINDIA","ABCAPITAL","ABFRL","ALKEM","ALKYLAMINE","ALOKINDS","AMARAJABAT","APLAPOLLO","ATUL","BALRAMCHIN",
+  "BATAINDIA","BIOCON","BIRLACORPN","BSOFT","CAMS","CANFINHOME","CHAMBLFERT","CITYUNION","COROMANDEL",
+  "CROMPTON","CYIENT","DALBHARAT","DELTACORP","ESCORTS","GNFC","GRANULES","GRAPHITE","GUJGASLTD","HFCL",
+  "HINDCOPPER","HONAUT","HUDCO","IBULHSGFIN","IDEA","IEX","INDIACEM","INDIAMART","INDIANB","INDUSTOWER",
+  "INTELLECT","IPCALAB","IRB","JKCEMENT","JSL","JUBLFOOD","KALYANKJIL","KEI","LALPATHLAB","LAURUSLABS",
+  "LICI","LTTS","MAXHEALTH","METROPOLIS","MFSL","NAVINFLUOR","NAUKRI","NBCC","NCC",
+  "NHPC","NLCINDIA","OIL","PEL","POONAWALLA","RAMCOCEM","RAIN","RATNAMANI","RAYMOND",
+  "SJVN","SOLARINDS","SONACOMS","STAR","SUNTV","SYNGENE","TATACHEM","TATACOMM","TATAINVEST","TIINDIA",
+  "TORNTPHARM","TORNTPOWER","TRIDENT","UBL","UNIONBANK","UNOMINDA","YESBANK","ZEEL","ZYDUSLIFE"
+];
+
+var T1_SET = {}, T2_SET = {};
+TIER1_SYMS.forEach(function(s){T1_SET[s]=1});
+TIER2_SYMS.forEach(function(s){if(!T1_SET[s])T2_SET[s]=1});
+
+var LIQ={};try{LIQ=JSON.parse(localStorage.getItem("nse_liq")||"{}")}catch(e){LIQ={}}
+function saveLiq(){try{localStorage.setItem("nse_liq",JSON.stringify(LIQ))}catch(e){}}
+function medianOf(a){if(!a.length)return null;var x=a.slice().sort(function(p,q){return p-q});return x[Math.floor((x.length-1)/2)]}
+/* Measure how tradable a symbol really is from its live chain: share of near-ATM options quoted both sides, and their median bid-ask gap */
+function noteLiquidity(und,rows,spot){
+  if(!mkt()||!spot||!rows.length)return;
+  var e0=rows[0].exp,by=rows.filter(function(r){return r.exp===e0&&r.k!=null}),ks=[],seen={};
+  by.forEach(function(r){if(!seen[r.k]){seen[r.k]=1;ks.push(r.k)}});
+  ks.sort(function(a,b){return a-b});if(ks.length<8)return;
+  var ai=0;ks.forEach(function(k,i){if(Math.abs(k-spot)<Math.abs(ks[ai]-spot))ai=i});
+  var win={},i;for(i=Math.max(0,ai-5);i<=Math.min(ks.length-1,ai+5);i++)win[ks[i]]=1;
+  var tot=0,two=0,sp=[];
+  by.forEach(function(r){if(!win[r.k])return;tot++;if(r.bid>0&&r.ask>0&&r.ask>=r.bid){two++;sp.push((r.ask-r.bid)/((r.ask+r.bid)/2))}});
+  if(tot<8)return;
+  LIQ[und]={c:two/tot,s:sp.length?medianOf(sp):1,t:Date.now()};saveLiq();
+}
+function tierFromLiq(l){if(l.c>=0.8&&l.s<=0.015)return"1";if(l.c>=0.5&&l.s<=0.04)return"2";return"3"}
+function getTierOf(sym){
+  var l=LIQ[sym];if(l&&Date.now()-l.t<CACHE_15D)return tierFromLiq(l);
+  if(T1_SET[sym])return"1";
+  if(T2_SET[sym])return"2";
+  return"3";
+}
+function foMaster(){try{var c=MST["NSE"]||JSON.parse(localStorage.getItem("nse_mst_NSE")||"null");return c&&c.m?c.m:null}catch(e){return null}}
+function getAllKnownSymbols(){
+  var map={}, out=[], fm=foMaster();
+  function add(s){if(s&&!map[s]){map[s]=1;out.push(s)}}
+  function addS(s){if(fm&&!fm[s]&&!IDX[s])return;add(s)}
+  TIER1_SYMS.forEach(addS);
+  TIER2_SYMS.forEach(addS);
+  if(fm)Object.keys(fm).sort().forEach(add);
+  TIER3_FALLBACK.forEach(addS);
+  return out;
+}
+
+function getTierSymbols(){
+  var tier=document.getElementById("tier").value||"1";
+  var all=getAllKnownSymbols();
+  return all.filter(function(s){return tier==="ALL"||getTierOf(s)===tier});
+}
+
+function populateSymbolDatalist(){
+  var filtered=getTierSymbols();
+  var dl=document.getElementById("ul");
+  dl.innerHTML=filtered.map(function(s){
+    var t=getTierOf(s);
+    var lbl=t==="1"?"Tier 1 • High Liquidity":(t==="2"?"Tier 2 • Med Liquidity":"Tier 3 • Low Liquidity");
+    return '<option value="'+s+'">'+lbl+'</option>';
+  }).join("");
+  document.getElementById("symCnt").textContent=filtered.length;
+  updateMstInfo();
+}
+
+function updateMstInfo(){
+  var info=document.getElementById("mstInfo");
+  try{
+    var c=MST["NSE"]||JSON.parse(localStorage.getItem("nse_mst_NSE")||"null");
+    if(c&&c.t){
+      var days=Math.floor((Date.now()-c.t)/86400000);
+      var cnt=c.m?Object.keys(c.m).length:0;
+      info.textContent="F&O list cached "+days+"d ago ("+cnt+" NSE symbols, refreshes every 15d)";
+      return;
+    }
+  }catch(e){}
+  info.textContent="Using built-in 3-tier F&O list (auto-syncs with Fyers every 15d)";
+}
+
+/* Drawer toggle (TradingView bookmark button) */
+(function(){
+  var dr=document.getElementById("drawer"),btn=document.getElementById("btnDrawer"),cls=document.getElementById("closeDrawer");
+  function setDrawer(open){
+    dr.classList.toggle("open",open);
+    btn.classList.toggle("active",open);
+    document.body.classList.toggle("drawer-open",open);
+    dr.setAttribute("aria-hidden",open?"false":"true");
+    try{localStorage.setItem("sc_drawer",open?"1":"0")}catch(e){}
+  }
+  btn.addEventListener("click",function(){setDrawer(!dr.classList.contains("open"))});
+  cls.addEventListener("click",function(){setDrawer(false)});
+  try{if(localStorage.getItem("sc_drawer")==="1")setDrawer(true)}catch(e){}
+})();
+
+document.getElementById("plk").addEventListener("input",function(){
+  try{localStorage.setItem("sc_plk",this.value)}catch(e){}
+  if(TIER_MODE)renderTierLeaderboard();
+  else if(ROWS.length||val("inp"))scan();
+});
+document.getElementById("typ").addEventListener("change",function(){if(ROWS.length||val("inp"))scan()});
+document.getElementById("tier").addEventListener("change",function(){
+  try{localStorage.setItem("sc_tier",this.value)}catch(e){}
+  populateSymbolDatalist();
+});
+document.getElementById("plan").addEventListener("change",function(){try{localStorage.setItem("sc_plan",this.value)}catch(e){}showReq()});
+document.getElementById("mode_q").addEventListener("change",function(){setMode(this.value)});
+document.getElementById("minbd").addEventListener("input",function(){
+  try{localStorage.setItem("sc_minbd",this.value)}catch(e){}
+  if(TIER_MODE)renderTierLeaderboard();
+  else if(ROWS.length||val("inp"))scan();
+});
+document.getElementById("maxsd").addEventListener("input",function(){
+  try{localStorage.setItem("sc_maxsd",this.value)}catch(e){}
+  if(TIER_MODE)renderTierLeaderboard();
+  else if(ROWS.length||val("inp"))scan();
+});
+
+var LIVE=false,TMR=null,BUSY=false,TIER_BUSY=false,TIER_ABORT=false,TIER_MODE=false,TIER_ITEMS=[],DEPTH={};
+var EXPMETA={},LAST_PICKED=[];
+function num(x){var n=parseFloat(x);return isFinite(n)?n:null}
+var ROWS=[],LOTS={},PROBING={},MST={},MSTP={},MISS={},PEND=[],PENDK={},HID=0,HIDU=0,AUTOBUSY=false,TTL=12e5,MD={d:"",n:0},MMIN=[];
+
+/* Self-learning per-symbol SPAN calibration factor (learned when Method A runs) */
+/* Estimate-vs-exact margin samples (raw estimate vs real Fyers SPAN), kept per strategy and per symbol */
+var CALS={R:{g:[],s:{}},B:{g:[],s:{}}};
+try{var _c=JSON.parse(localStorage.getItem("nse_cal2")||"null");if(_c&&_c.R&&_c.B)CALS=_c}catch(e){}
+function saveCals(){try{localStorage.setItem("nse_cal2",JSON.stringify(CALS))}catch(e){}}
+function addCal(kind,u,ratio){
+  if(!(ratio>0.05&&ratio<20))return;
+  var k=CALS[kind];k.g.push(ratio);if(k.g.length>60)k.g.shift();
+  var a=k.s[u]=k.s[u]||[];a.push(ratio);if(a.length>30)a.shift();saveCals();
+}
+function pct(arr,p){var a=arr.slice().sort(function(x,y){return x-y});return a[Math.min(a.length-1,Math.max(0,Math.round((a.length-1)*p)))]}
+function calInfo(kind,u){
+  var k=CALS[kind],a=(k.s[u]&&k.s[u].length>=3)?k.s[u]:(k.g.length>=5?k.g:null);
+  if(!a)return{n:k.g.length,med:1,lo:0.6,hi:1.5,known:false};
+  return{n:a.length,med:pct(a,0.5),lo:Math.max(0.25,Math.min(0.9,pct(a,0.1))),hi:pct(a,0.9),known:true};
+}
+function calSummary(kind){
+  var g=CALS[kind].g;
+  if(g.length<3)return"margin estimate not calibrated yet ("+g.length+" exact checks so far; safe default band used)";
+  return"margin estimate vs exact: median "+fx(pct(g,0.5),2)+"x, 10th to 90th percentile "+fx(pct(g,0.1),2)+" to "+fx(pct(g,0.9),2)+"x (from "+g.length+" exact checks)";
+}
+
+try{var zz=JSON.parse(localStorage.getItem("nse_mday")||"{}");if(zz.d===istDay())MD=zz}catch(e){}
+function mgLog(){MMIN.push(Date.now());if(MD.d!==istDay())MD={d:istDay(),n:0};MD.n++;try{localStorage.setItem("nse_mday",JSON.stringify(MD))}catch(e){}}
+function canMargin(){var t=Date.now();MMIN=MMIN.filter(function(x){return t-x<60000});return MMIN.length<(parseInt(val("mpm"),10)||20)&&(MD.d!==istDay()||MD.n<2000)}
+function autoCheck(){
+  if(TIER_MODE||AUTOBUSY||!PEND.length||val("amg")!=="1"||!val("fa")||!canMargin())return;
+  var max=Math.min(parseInt(val("mck"),10)||15,15),list=PEND.slice().sort(function(a,b){return(a.u-b.u)||((b.c||0)-(a.c||0))}).slice(0,max),seq=Promise.resolve(),n=0;
+  AUTOBUSY=true;
+  list.forEach(function(legs){seq=seq.then(function(){if(!canMargin())return;var d=n++?350:0;return wait(d).then(function(){return mfetch(legs,undefined,legs.raw,"R")})})});
+  seq.then(function(){AUTOBUSY=false;if(n)scan()}).catch(function(err){
+    AUTOBUSY=false;if(err.learned){scan();return}
+    document.getElementById("amg").value="0";scan();
+    document.getElementById("msg").textContent="Auto margin check stopped: "+err.message+". Switch it back on in Settings to retry."});
+}
+try{LOTS=JSON.parse(localStorage.getItem("nse_lots")||"{}")}catch(e){LOTS={}}
+Object.keys(LOTS).forEach(function(k){if(typeof LOTS[k]==="number")LOTS[k]={n:LOTS[k],src:"probe",t:0}});
+function baseLots(){return Math.max(1,Math.round(num(document.getElementById("mul").value)||1))}
+function lotSizeFor(u){
+  var sym=(u||val("und")||"").toUpperCase();
+  if(sym&&LOTS[sym]&&LOTS[sym].n>0)return LOTS[sym].n;
+  return 1;
+}
+function lotSize(){return lotSizeFor(val("und").toUpperCase())}
+function qtyMulFor(u){return baseLots()*lotSizeFor(u)}
+function qtyMul(){return baseLots()*lotSize()}
+function lotTxt(n){return n+(n===1?"lot":"lots")}
+function saveLots(){try{localStorage.setItem("nse_lots",JSON.stringify(LOTS))}catch(e){}}
+function freshLot(e){return !!e&&Date.now()-e.t<CACHE_15D}
+function learnLot(u,n,src){LOTS[u]={n:n,src:src||"probe",t:Date.now()};saveLots()}
+function lotFrom(j){var m=/minimum lot size\s+(\d+)/i.exec((j&&j.message)||"");return m?parseInt(m[1],10):null}
+function eat(line,m){
+  var f=line.split(",");if(f.length<14||f[9].indexOf(":")<0)return;
+  var lot=parseInt(f[3],10),u=f[13].trim(),x=parseInt(f[8],10)||0,c=m[u],now=Date.now()/1000-86400;
+  if(!(lot>0)||!u)return;
+  if(!c||(x>=now&&(c.x<now||x<c.x)))m[u]={x:x,l:lot};
+}
+function readStream(r,m){
+  if(!r.body||!r.body.getReader)return r.text().then(function(t){t.split("\n").forEach(function(l){eat(l,m)})});
+  var rd=r.body.getReader(),dec=new TextDecoder(),buf="";
+  function pump(){return rd.read().then(function(o){
+    if(o.done){if(buf)eat(buf,m);return}
+    buf+=dec.decode(o.value,{stream:true});var a=buf.split("\n");buf=a.pop();a.forEach(function(l){eat(l,m)});return pump()})}
+  return pump();
+}
+function getMaster(ex,force){
+  var c=MST[ex];
+  if(!c){try{c=JSON.parse(localStorage.getItem("nse_mst_"+ex)||"null")}catch(e){c=null}}
+  if(c&&!force&&Date.now()-c.t<CACHE_15D){MST[ex]=c;return Promise.resolve(c.m)}
+  if(MSTP[ex])return MSTP[ex];
+  document.getElementById("st").textContent="Downloading F&O symbol & lot list from Fyers (cached for 15 days)...";
+  var m={};
+  MSTP[ex]=fetch("https://public.fyers.in/sym_details/"+ex+"_FO.csv").then(function(r){
+    if(!r.ok)throw new Error("HTTP "+r.status);return readStream(r,m)})
+  .then(function(){
+    if(!Object.keys(m).length)throw new Error("empty list");
+    var o={t:Date.now(),m:m};MST[ex]=o;try{localStorage.setItem("nse_mst_"+ex,JSON.stringify(o))}catch(e){}
+    MSTP[ex]=null;populateSymbolDatalist();return m},
+  function(err){MSTP[ex]=null;throw err});
+  return MSTP[ex];
+}
+function ensureLot(u){
+  if(freshLot(LOTS[u]))return Promise.resolve(true);
+  var ex=fySym(u).indexOf("BSE:")===0?"BSE":"NSE";
+  return getMaster(ex).then(function(m){
+    if(m[u]){learnLot(u,m[u].l,"master");return true}
+    var c=MST[ex];
+    if(c&&Date.now()-c.t>36e5&&!MISS[u]){MISS[u]=1;return getMaster(ex,true).then(function(m2){if(m2[u]){learnLot(u,m2[u].l,"master");return true}return false})}
+    return false;
+  }).catch(function(){return false});
+}
+function probeLot(u,sym){
+  if(PROBING[u])return;PROBING[u]=1;mgLog();showReq();
+  fetch("https://api.fyers.in/api/v2/span_margin",{method:"POST",headers:{"Authorization":val("fa")+":"+val("ft"),"Content-Type":"application/json"},
+    body:JSON.stringify({data:[{symbol:sym,qty:1,side:1,type:2,productType:"MARGIN",limitPrice:0.0,stopLoss:0.0}]})})
+  .then(function(r){return r.text()}).then(function(t){var n=lotFrom(loose(t));
+    if(n){learnLot(u,n,"probe");scan();document.getElementById("st").textContent+=" Lot size "+n+" learned."}})
+  .catch(function(){}).then(function(){PROBING[u]=0});
+}
+function val(i){return document.getElementById(i).value.trim()}
+function loose(t){try{return JSON.parse(t)}catch(e){var i=t.indexOf("}{");if(i>0){try{return JSON.parse(t.slice(0,i+1))}catch(x){}}return null}}
+function ex6(e){var m=/^(\d\d)-(\d\d)-(\d{4})$/.exec(e.date||"");if(m)return m[1]+m[2]+m[3].slice(2);
+  var t=new Date((num(e.expiry)||0)*1000+19800000);return("0"+t.getUTCDate()).slice(-2)+("0"+(t.getUTCMonth()+1)).slice(-2)+String(t.getUTCFullYear()).slice(2)}
+
+/* 1 Weekly + 2 Monthly Expiry Selector:
+   Never selects Next Month by default */
+function pick1W2M(exList){
+  if(!exList||!exList.length)return [];
+  var items=exList.map(function(e,idx){
+    var code=ex6(e);
+    var ym=code.slice(4,6)+code.slice(2,4);
+    return {raw:e, code:code, ym:ym, idx:idx};
+  });
+  var lastOfMonth={}, monthOrder=[];
+  items.forEach(function(it){
+    if(!lastOfMonth[it.ym])monthOrder.push(it.ym);
+    lastOfMonth[it.ym]=it;
+  });
+  var picked=[], seen={};
+  function addPick(it,role,defSel){
+    if(!it||seen[it.code])return;
+    seen[it.code]=1;
+    EXPMETA[it.code]={role:role,def:defSel,raw:it.raw};
+    if(EXPSEL[it.code]===undefined){
+      EXPSEL[it.code]=defSel;
+    }
+    picked.push({raw:it.raw,code:it.code,role:role,def:defSel,idx:it.idx});
+  }
+
+  var first=items[0];
+  var m1=monthOrder.length>0?lastOfMonth[monthOrder[0]]:null;
+  var m2=monthOrder.length>1?lastOfMonth[monthOrder[1]]:null;
+  var m3=monthOrder.length>2?lastOfMonth[monthOrder[2]]:null;
+
+  if(m1 && first.code!==m1.code){
+    addPick(first,"Weekly",true);
+    addPick(m1,"Cur Month",true);
+    if(m2)addPick(m2,"Next Month",false);
+  } else if(items.length>=3 && items[1] && m2 && items[1].code!==m2.code){
+    addPick(first,"Cur Month",true);
+    addPick(items[1],"Weekly",true);
+    addPick(m2,"Next Month",false);
+  } else {
+    addPick(first,"Cur Month",true);
+    if(m2)addPick(m2,"Next Month",false);
+    if(m3)addPick(m3,"Month 3",false);
+  }
+  LAST_PICKED=picked;
+  sv();
+  return picked;
+}
+
+function isExpSelected(code){
+  if(EXPSEL[code]!==undefined)return EXPSEL[code]===true;
+  if(EXPMETA[code]!==undefined)return EXPMETA[code].def===true;
+  return true;
+}
+
+var IDX={NIFTY:"NSE:NIFTY50-INDEX",BANKNIFTY:"NSE:NIFTYBANK-INDEX",FINNIFTY:"NSE:FINNIFTY-INDEX",MIDCPNIFTY:"NSE:MIDCPNIFTY-INDEX",SENSEX:"BSE:SENSEX-INDEX"};
+function fySym(u){return IDX[u]||("NSE:"+u+"-EQ")}
+function chainRows(j,und,exp){
+  var oc=(j.data&&j.data.optionsChain)||[],rows=[],spot=null;
+  oc.forEach(function(o){if(!o.option_type&&(o.strike_price==null||o.strike_price<0)){var l=num(o.ltp);if(l!=null&&l>0)spot=l}});
+  oc.forEach(function(o){
+    var ty=o.option_type==="CE"?"C":(o.option_type==="PE"?"P":null);if(!ty)return;
+    var b=num(o.bid),a=num(o.ask);if(b!=null&&b<=0)b=null;if(a!=null&&a<=0)a=null;
+    rows.push({sym:o.symbol,type:ty,und:und,k:num(o.strike_price),exp:exp,bid:b,ask:a,d:(o.greeks&&num(o.greeks.delta)!=null)?(ty==="P"?-Math.abs(num(o.greeks.delta)):Math.abs(num(o.greeks.delta))):null,oi:num(o.oi),spot:spot,miv:(o.greeks&&num(o.greeks.iv)!=null)?num(o.greeks.iv):null,
+      mark:(b!=null&&a!=null)?(a+b)/2:null,last:num(o.ltp),bsz:num(o.bid_qty!=null?o.bid_qty:o.bid_size),asz:num(o.ask_qty!=null?o.ask_qty:o.ask_size),vol:num(o.volume)});
+  });
+  return{rows:rows,spot:spot};
+}
+function getRows(){
+  var t=document.getElementById("inp").value.trim();
+  if(!t)return ROWS;
+  var j=loose(t);if(!j)throw new Error("bad");
+  var ed=(j.data&&j.data.expiryData)||[];
+  if(ed.length)pick1W2M(ed);
+  return chainRows(j,(val("und")||"NIFTY").toUpperCase(),ed.length?ex6(ed[0]):"").rows;
+}
+function fx(n,d){return n==null?"–":n.toFixed(d==null?2:d)}
+function sz(n){return n==null?"–":n}
+
+/* Min Bought Strike Distance Filter (0 or blank = no minimum) */
+function minBuyDistFrac(){
+  var v=num(document.getElementById("minbd").value);
+  return (v!=null&&v>0)?(v/100):null;
+}
+function withinBuyDist(buyStrike,spot){
+  if(!spot||spot<=0)return true;
+  var lim=minBuyDistFrac();
+  if(lim==null)return true;
+  return (Math.abs(buyStrike-spot)/spot) + 1e-9 >= lim;
+}
+
+/* Max Sold Strike Distance Filter (default 29.5% from Spot) */
+function maxSellDistFrac(){
+  var v=num(document.getElementById("maxsd").value);
+  return (v!=null&&v>0)?(v/100):0.295;
+}
+function withinSellDist(sellStrike,spot){
+  if(!spot||spot<=0)return true;
+  return (Math.abs(sellStrike-spot)/spot) <= (maxSellDistFrac()+1e-9);
+}
+
+function bookHtml(l,tag){
+  var d=DEPTH[l.sym],A,B;
+  if(d){A=d.a.slice(0,3);B=d.b.slice(0,3)}else{A=l.ask!=null?[{p:l.ask,s:l.asz}]:[];B=l.bid!=null?[{p:l.bid,s:l.bsz}]:[]}
+  var mx=1;A.concat(B).forEach(function(o){if(o.s!=null&&o.s>mx)mx=o.s});
+  function row(o,c){var w=o.s==null?0:Math.round(o.s/mx*100);return '<div class="bk '+c+'" style="--w:'+w+'%"><span>'+fx(o.p)+'</span><span>'+sz(o.s)+'</span></div>'}
+  var optLbl=l.type==="C"?"CE":"PE";
+  return '<div><div class="bh">'+tag+' • '+l.k+' '+optLbl+'</div><div style="font-size:11px;color:var(--mute);white-space:nowrap">IV '+fx(l.miv,1)+' \u0394 '+fx(l.d,2)+'</div><div style="font-size:11px;color:var(--mute);white-space:nowrap">OI '+(l.oi==null?"\u2013":l.oi)+'</div><div class="bt"><span>Price</span><span>Size</span></div>'+
+    A.slice().reverse().map(function(o){return row(o,"a")}).join("")+
+    '<div class="bm"><b>'+fx(l.last)+'</b><span>Mark '+fx(l.mark)+'</span></div>'+
+    B.map(function(o){return row(o,"b")}).join("")+'</div>';
+}
+function rs(n){return n==null?"\u2013":Math.round(n).toLocaleString("en-IN")}
+var MG={};
+function mkey(legs){return val("prd")+"|"+legs.map(function(x){return x.s+":"+x.side+":"+x.qty}).join("|")}
+function qadd(legs,c,u,raw){var k=mkey(legs);if(!PENDK[k]){PENDK[k]=1;legs.c=c;legs.u=u;legs.raw=raw;PEND.push(legs)}}
+
+/* Helper: scale half-lots (e.g. 1 & 7.5 -> 2 & 15 lots) so every leg is whole lots */
+function scaleFactor(qArr){
+  var b=baseLots();
+  var needsDouble=qArr.some(function(x){return Math.abs((x*b)-Math.round(x*b))>1e-9});
+  return needsDouble?2:1;
+}
+
+/* ============================================================================
+   Method B: IV-Adjusted + Self-Calibrating SPAN Margin Estimator
+   ============================================================================ */
+function estMarginRaw(und,spot,kb,ks,X,MUL,sc,buyLeg,sellLeg){
+  var isIdx=!!IDX[und];
+  var iv = (sellLeg&&sellLeg.miv&&sellLeg.miv>0) ? sellLeg.miv : ((buyLeg&&buyLeg.miv&&buyLeg.miv>0) ? buyLeg.miv : (isIdx?15:28));
+  var dailySigma = (iv/100)/15.8745;
+  var spanStress = dailySigma * (isIdx ? 3.45 : 3.65);
+  var elmRate = isIdx ? 0.02 : 0.052;
+  var minRate = isIdx ? 0.115 : 0.175;
+  var maxRate = isIdx ? 0.22 : 0.44;
+  var nakedRate = Math.min(maxRate, Math.max(minRate, spanStress + elmRate));
+
+  var spreadRate = isIdx ? 0.021 : 0.033;
+  var nakedUnits = Math.max(0,X-1)*MUL*sc;
+  var coveredUnits = 1*MUL*sc;
+  var otmFrac = spot>0 ? Math.abs(ks-spot)/spot : 0;
+  var otmDiscount = Math.min(nakedRate*0.42, otmFrac*0.32);
+  var effNakedRate = Math.max(isIdx?0.075:0.115, nakedRate - otmDiscount);
+  var perUnitNaked = spot * effNakedRate;
+  var perUnitSpread = Math.min(Math.abs(ks-kb), spot*spreadRate);
+  var rawEst = Math.max(10000, (nakedUnits*perUnitNaked) + (coveredUnits*perUnitSpread));
+
+  return rawEst;
+}
+function estMarginRatio(und,spot,kb,ks,X,MUL,sc,buyLeg,sellLeg){return estMarginRaw(und,spot,kb,ks,X,MUL,sc,buyLeg,sellLeg)*calInfo("R",und).med}
+
+function estMarginButterflyRaw(und,spot,w,MUL,cLeg){
+  var isIdx=!!IDX[und];
+  var iv=(cLeg&&cLeg.miv&&cLeg.miv>0)?cLeg.miv:(isIdx?15:28);
+  var volScale=Math.max(0.85,Math.min(1.6,iv/(isIdx?15:26)));
+  var base=Math.max(w*MUL*1.15, spot*MUL*(isIdx?0.024:0.038)*volScale);
+  return Math.max(8000,base);
+}
+function estMarginButterfly(und,spot,w,MUL,cLeg){return estMarginButterflyRaw(und,spot,w,MUL,cLeg)*calInfo("B",und).med}
+
+function legsHtml(r,customMul){
+  var tags=r.tags,t="",MV=customMul||qtyMul();
+  r.L.forEach(function(l){if(DEPTH[l.sym])t=DEPTH[l.sym].t});
+  var sc=scaleFactor(r.q);
+  var legs=r.L.map(function(l,i){var m=r.q[i];return{s:l.sym,side:m>0?1:-1,qty:Math.round(Math.abs(m)*MV*sc)}}),g=MG[mkey(legs)],bs='style="margin-top:6px;padding:7px;font-size:13px;width:100%"';
+  return '<div class="bks" style="grid-template-columns:repeat('+r.L.length+',1fr)">'+r.L.map(function(l,i){return bookHtml(l,tags[i])}).join("")+'</div>'+
+    '<div class="sub" style="margin:6px 0 0">'+(t?t:'Best bid and ask only.')+'</div>'+
+    '<button class="dp sec" data-s="'+r.L.map(function(l){return l.sym}).join(",")+'" '+bs+'>Load top 3 bids and asks ('+r.L.length+' requests)</button>'+
+    '<div class="sub" style="margin:8px 0 0">'+(g?'Exact Fyers Margin \u20b9'+rs(g.total)+' (SPAN '+rs(g.span)+', exposure '+rs(g.expo)+')'+(g.benefit?', hedge benefit '+rs(g.benefit):''):(r.estMg?'IV-Estimated Margin ~\u20b9'+rs(r.estMg)+' (tap Check margin for exact Fyers SPAN)':'Margin not checked.'))+'</div>'+
+    '<button class="mgb sec" data-done="'+(g?1:0)+'" data-u="'+(r.und||"")+'" data-est="'+(r.estRaw||"")+'" data-kind="'+(r.q&&r.q.length===3?"B":"R")+'" data-m="'+encodeURIComponent(JSON.stringify(legs))+'" '+bs+'>'+(g?'Recheck margin':'Check exact Fyers margin')+' (1 request)</button>';
+}
+
+function expLabel(e){
+  var meta=EXPMETA[e];
+  return meta&&meta.role ? (e+" ("+meta.role+")") : e;
+}
+
+function renderExpiries(rows,und,typ){
+  var exps={};
+  rows.forEach(function(r){if(r.und===und&&r.type===typ&&expLive(r.exp))exps[r.exp]=1});
+  LAST_PICKED.forEach(function(p){if(expLive(p.code))exps[p.code]=1});
+  Object.keys(EXPSEL).forEach(function(k){if(!expLive(k))delete EXPSEL[k]});
+  var el=Object.keys(exps).sort(function(a,b){return ek(a)<ek(b)?-1:1}),sig=und+typ+el.join(),box=document.getElementById("expbox");
+  if(sig!==EXPSIG){EXPSIG=sig;
+    box.innerHTML='<button class="eb sec sm" data-a="all" style="margin:0 6px 6px 0">All</button><button class="eb sec sm" data-a="def" style="margin:0 6px 6px 0">Default (Weekly + Cur Month)</button><button class="eb sec sm" data-a="none" style="margin:0 6px 6px 0">Clear</button><br>'+
+      el.map(function(e){return '<label class="chip"><input type="checkbox" data-e="'+e+'"'+(isExpSelected(e)?' checked':'')+'>'+expLabel(e)+'</label>'}).join("")}
+  return el.filter(function(e){return isExpSelected(e)});
+}
+
+function scanB(){
+  TIER_MODE=false;
+  var msg=document.getElementById("msg"),out=document.getElementById("out");msg.textContent="";out.innerHTML="";
+  var rows;
+  try{rows=getRows()}catch(e){msg.textContent="Could not read pasted data.";return}
+  if(!rows.length){msg.textContent="No option contracts found. Click Start live, Scan Tier, or paste Fyers data in Settings.";return}
+  var und=(val("und")||rows[0].und||"NIFTY").toUpperCase(),typ=val("typ"),optLbl=typ==="C"?"CE":"PE",
+      maxw=num(val("wid"))||1e9,minr=num(val("rat"))||0,plk=num(val("plk"));
+  var MUL=qtyMulFor(und),bLots=baseLots(),clo=num(val("clo")),chi=num(val("chi")),srt=val("srt"),au=val("amg")==="1";
+  HID=0;HIDU=0;PEND=[];PENDK={};
+
+  var pick=renderExpiries(rows,und,typ);
+  if(!pick.length){msg.textContent="Select at least one expiry in Settings.";return}
+  var spot=num(val("spot"));
+  if(spot==null){var f=rows.filter(function(r){return r.und===und&&r.spot!=null})[0];if(f)spot=f.spot}
+
+  var by={};rows.forEach(function(r){if(r.und===und&&r.type===typ&&pick.indexOf(r.exp)>=0){(by[r.exp]=by[r.exp]||{})[r.k]=r}});
+  var res=[];
+  Object.keys(by).forEach(function(e){
+    var ks=Object.keys(by[e]).map(Number).sort(function(a,b){return a-b}),m=by[e];
+    ks.forEach(function(k){
+      if(!withinSellDist(k,spot))return;
+      ks.forEach(function(lo){
+        if(lo>=k)return;var w=k-lo,hi=k+w;if(w>maxw||!m[hi])return;
+        if(!withinBuyDist(lo,spot)||!withinBuyDist(hi,spot))return;
+        var a=m[lo],b=m[k],c=m[hi];
+        if(a.ask==null||b.bid==null||c.ask==null||b.bid<=0)return;
+        var deb=a.ask-2*b.bid+c.ask,cash=-deb*MUL;if(deb>=w)return;
+        if(clo!=null&&cash<clo)return;if(chi!=null&&cash>chi)return;
+        var ratio=deb>0?(w-deb)/deb:Infinity;if(deb>0&&ratio<minr)return;
+
+        var legs=[1,-2,1].map(function(mult,i){return{s:[a,b,c][i].sym,side:mult>0?1:-1,qty:Math.round(Math.abs(mult)*MUL)}});
+        var mg=MG[mkey(legs)];
+        var maxProf=(w-deb)*MUL;
+        var v=(mg&&mg.total>0)?(maxProf/mg.total*100000):null;
+
+        if(au&&(!mg||Date.now()-mg.t>TTL))qadd(legs,maxProf,mg?1:0);
+        if(plk!=null){
+          if(mg){if(v==null||v<=plk){HID++;return}}
+          else if(au){HIDU++;return}
+        }
+
+        var nd=(a.d!=null&&b.d!=null&&c.d!=null)?a.d-2*b.d+c.d:null;
+        var rom=(mg&&mg.total>0)?maxProf/mg.total:null;
+        res.push({
+          und:und,tags:["Buy "+lotTxt(bLots),"Sell "+lotTxt(2*bLots),"Buy "+lotTxt(bLots)],
+          q:[1,-2,1],p:maxProf,L:[a,b,c],cash:cash,e:e,lo:lo,k:k,hi:hi,w:w,deb:deb,ratio:ratio,nd:nd,mg:mg,rom:rom,plkVal:v,off:spot?(k-spot)/spot*100:null
+        });
+      });
+    });
+  });
+
+  function sg(n){return(n>0?"+":"")+n.toFixed(2)}
+  function key(r){var v=srt==="rom"?r.plkVal:r.ratio;return v==null?-Infinity:v}
+  res.sort(function(x,y){var a=key(x),b=key(y);return a===b?0:(b>a?1:-1)});
+
+  if(HID||HIDU)msg.textContent=(HID?HID+" hidden (not above ₹"+rs(plk)+"/lakh). ":"")+(HIDU?HIDU+" checking margin in background...":"");
+  if(!res.length){
+    if(!HIDU)msg.textContent=(msg.textContent+" No butterflies found above target within your strike % limits.").trim();
+    autoCheck();return;
+  }
+
+  out.innerHTML='<div class="sub" style="margin-bottom:6px">Showing '+Math.min(res.length,25)+' of '+res.length+' matching butterflies (selling strike ≤ '+fx(maxSellDistFrac()*100,1)+'% from spot'+(minBuyDistFrac()!=null?', bought strikes ≥ '+fx(minBuyDistFrac()*100,1)+'%':'')+').</div>'+
+  res.slice(0,25).map(function(r){
+    var g=r.mg;
+    return '<div class="c"><b>'+expLabel(r.e)+' • Buy '+lotTxt(bLots)+' '+r.lo+' '+optLbl+' / Sell '+lotTxt(2*bLots)+' '+r.k+' '+optLbl+' / Buy '+lotTxt(bLots)+' '+r.hi+' '+optLbl+' • Gap '+r.w+' • Ratio 1:2:1 • Credit '+sg(r.cash)+'</b>'+(r.plkVal!=null?'<span class="tag" style="margin-left:6px">₹'+rs(r.plkVal)+'/lakh</span>':'')+
+    '<div class="g"><span>Net credit / debit</span><span>'+sg(r.cash)+'</span><span>Max loss</span><span>'+(r.deb>0?sg(-r.deb*MUL):'none, credit')+'</span>'+
+    '<span>Max profit</span><span>'+sg(r.p)+'</span><span>Profit/risk</span><span>'+(r.ratio===Infinity?'credit':fx(r.ratio))+'</span>'+
+    '<span>Margin (Fyers)</span><span>'+(g?'₹'+rs(g.total):'checking / tap below')+'</span>'+
+    '<span>Profit per ₹1 lakh</span><span>'+(r.plkVal==null?'–':'₹'+rs(r.plkVal))+'</span>'+
+    '<span>Net delta</span><span>'+fx(r.nd,3)+'</span><span>Sold strike vs spot</span><span>'+(r.off==null?'–':fx(r.off,1)+'%')+'</span></div>'+legsHtml(r,MUL)+'</div>';
+  }).join("");
+  autoCheck();
+}
+
+var OPEN={},EXPSEL={},EXPSIG="";
+try{EXPSEL=JSON.parse(localStorage.getItem("sc_exp")||"{}")}catch(e){EXPSEL={}}
+function sv(){try{localStorage.setItem("sc_exp",JSON.stringify(EXPSEL))}catch(e){}}
+function ek(e){return e.slice(4,6)+e.slice(2,4)+e.slice(0,2)}
+function expLive(e){return Date.UTC(2000+parseInt(e.slice(4,6),10),parseInt(e.slice(2,4),10)-1,parseInt(e.slice(0,2),10),23,59,59)>Date.now()}
+
+function scanR(){
+  TIER_MODE=false;
+  var msg=document.getElementById("msg"),out=document.getElementById("out");msg.textContent="";out.innerHTML="";
+  var rows;
+  try{rows=getRows()}catch(e){msg.textContent="Could not read pasted data.";return}
+  if(!rows.length){msg.textContent="No option contracts found. Click Start live, Scan Tier, or paste Fyers data in Settings.";return}
+  var g=function(i){return document.getElementById(i).value};
+  var und=(val("und")||rows[0].und||"NIFTY").toUpperCase(),typ=g("typ"),optLbl=typ==="C"?"CE":"PE",
+      M0=num(g("mx")),MUL=qtyMulFor(und),bLots=baseLots(),c1=g("c1"),c2=g("c2"),dir=typ==="C"?1:-1,
+      minInflow=num(g("s2lo")),plk=num(g("plk")),xs=[],ms=[];
+  HID=0;HIDU=0;PEND=[];PENDK={};
+
+  var XM=num(g("xm"))||7;
+  for(var x=1;x<=XM;x+=0.5)xs.push(x);
+  if(M0==null)ms=[1];else if(M0===0){for(var i=1;i<=10;i++)ms.push(i/10)}else if(M0>0)ms=[M0/100];else{msg.textContent="Later ratio % must be 0 or > 0.";return}
+
+  var pick=renderExpiries(rows,und,typ);
+  if(!pick.length){msg.textContent="Select at least one expiry in Settings.";return}
+  var spot=num(g("spot"));
+  if(spot==null){var f=rows.filter(function(r){return r.und===und&&r.spot!=null})[0];if(f)spot=f.spot}
+  if(spot==null){msg.textContent="Spot price needed to locate ATM strike.";return}
+
+  var by={};rows.forEach(function(r){if(r.und===und&&r.type===typ&&pick.indexOf(r.exp)>=0){(by[r.exp]=by[r.exp]||{})[r.k]=r}});
+  function ok(nd,c){return c==="any"||(c==="debit"?nd>0:nd<0)}
+  function inr(v,lo){return !(lo!=null&&v<lo)}
+  function sg(n){return(n>0?"+":"")+n.toFixed(2)}
+  function be(k0,k1,nd,X){return X>1?fx((X*k1-k0-dir*nd)/(X-1),0):"none"}
+
+  function wholeLots(X){
+    var sc=scaleFactor([1,-X]);
+    return {sc:sc, buyL:Math.round(bLots*sc), sellL:Math.round(bLots*X*sc)};
+  }
+
+  var res=[];
+  Object.keys(by).forEach(function(e){
+    var m=by[e],ks=Object.keys(m).map(Number).sort(function(a,b){return a-b});
+    var k0=ks.reduce(function(p,k){return Math.abs(k-spot)<Math.abs(p-spot)?k:p},ks[0]);
+    var gaps=ks.map(function(k){return Math.round((k-k0)*dir*100)/100}).filter(function(d){return d>0});
+    gaps.forEach(function(gap){
+      var k1=Math.round((k0+dir*gap)*100)/100;if(!m[k1])return;
+      if(!withinSellDist(k1,spot))return;
+      var a=m[k0],b=m[k1];if(a.ask==null||b.bid==null)return;
+      xs.forEach(function(X){
+        var nA=a.ask-X*b.bid;
+        if(!ok(nA,c1))return;
+        var pairs=[],seen={};
+        ks.forEach(function(kb){
+          if((kb-k0)*dir<=0)return;
+          if(!withinBuyDist(kb,spot))return;
+          var kS=Math.round((kb+dir*gap)*100)/100;if(!m[kS])return;
+          if(!withinSellDist(kS,spot))return;
+          var p=m[kb],q=m[kS];if(p.ask==null||q.bid==null)return;
+          ms.forEach(function(M){
+            var X2=Math.floor(X*M*2+1e-9)/2;if(X2<=0||seen[kb+"|"+X2])return;seen[kb+"|"+X2]=1;var nB=p.ask-X2*q.bid;
+            if(!ok(nB,c2)||!inr(-nB*MUL,minInflow))return;
+            var wl2=wholeLots(X2);
+            pairs.push({kb:kb,ks:kS,nB:nB,X2:X2,M:M,L:[p,q],tags:["Buy "+lotTxt(wl2.buyL),"Sell "+lotTxt(wl2.sellL)]});
+          });
+        });
+        var wl1=wholeLots(X);
+        if(pairs.length)res.push({e:e,k0:k0,k1:k1,gap:gap,X:X,nA:nA,L:[a,b],tags:["Buy "+lotTxt(wl1.buyL),"Sell "+lotTxt(wl1.sellL)],pairs:pairs});
+      });
+    });
+  });
+
+  if(!res.length){msg.textContent="No matching ratio spreads found on selected expiry (with buy leg ≥ "+(minBuyDistFrac()?fx(minBuyDistFrac()*100,1):0)+"% and sell leg ≤ "+fx(maxSellDistFrac()*100,1)+"% from spot).";return}
+
+  function legsOf(L,X){var sc=scaleFactor([1,-X]);return[1,-X].map(function(m,i){return{s:L[i].sym,side:m>0?1:-1,qty:Math.round(Math.abs(m)*MUL*sc)}})}
+  function mgOf(L,X){return MG[mkey(legsOf(L,X))]}
+  function pl(nd,mg,X){var sc=scaleFactor([1,-X]);return mg&&mg.total>0?-nd*MUL*sc/mg.total*100000:null}
+
+  var au=val("amg")==="1",lsz=lotSizeFor(und);
+  function det(key,prefix,nd,kb,ks,X,gap,L,tags){
+    if(!withinBuyDist(kb,spot)||!withinSellDist(ks,spot))return "";
+    var mg=mgOf(L,X),v=pl(nd,mg,X),wl=wholeLots(X);
+    var estRawD=estMarginRaw(und,spot,kb,ks,X,MUL,wl.sc,L[0],L[1]),estMg=estRawD*calInfo("R",und).med;
+    if(au&&(!mg||Date.now()-mg.t>TTL))qadd(legsOf(L,X),-nd*MUL*wl.sc,mg?1:0,estRawD);
+    if(plk!=null){
+      if(mg){if(v==null||v<=plk){HID++;return ""}}
+      else if(au){HIDU++;return ""}
+    }
+    var totCredit=-nd*MUL*wl.sc;
+    var maxProf=(gap-nd)*MUL*wl.sc;
+    var dl=(L[0].d!=null&&L[1].d!=null)?(L[0].d-X*L[1].d)*wl.sc:null;
+    var buyDistPct=spot>0?((kb-spot)/spot*100):null;
+    var sellDistPct=spot>0?((ks-spot)/spot*100):null;
+    var ratioStr="1:"+X;
+    var buyCol=(prefix?prefix+": ":"")+"Buy "+lotTxt(wl.buyL)+" "+kb+" "+optLbl;
+    var sellCol="Sell "+lotTxt(wl.sellL)+" "+ks+" "+optLbl;
+    var summaryGrid='<div class="srow single">'+
+      '<span class="sc">'+buyCol+'</span>'+
+      '<span class="sc">'+sellCol+'</span>'+
+      '<span class="sc sc-muted">Gap '+gap+'</span>'+
+      '<span class="sc">Ratio '+ratioStr+'</span>'+
+      '<span class="sc">Credit '+sg(totCredit)+'</span>'+
+      '<span class="sc">'+(v!=null?'<span class="tag">₹'+rs(v)+'/lakh</span>':'')+'</span>'+
+      '</div>';
+
+    return '<details data-k="'+key+'"'+(OPEN[key]?' open':'')+'><summary>'+summaryGrid+'</summary>'+
+      '<div class="g">'+
+      '<span>Exact strikes &amp; lots</span><span>Buy '+lotTxt(wl.buyL)+' ('+rs(wl.buyL*lsz)+' qty) '+kb+' '+optLbl+' / Sell '+lotTxt(wl.sellL)+' ('+rs(wl.sellL*lsz)+' qty) '+ks+' '+optLbl+'</span>'+
+      '<span>Bought &amp; sold vs spot</span><span>Buy '+(buyDistPct==null?'–':(buyDistPct>0?'+':'')+fx(buyDistPct,2)+'%')+' &bull; Sell '+(sellDistPct==null?'–':(sellDistPct>0?'+':'')+fx(sellDistPct,2)+'%')+'</span>'+
+      '<span>Ratio &amp; gap</span><span>'+ratioStr+' ('+wl.buyL+':'+wl.sellL+') &bull; '+gap+' pts</span>'+
+      '<span>Net credit at traded lots</span><span>'+sg(totCredit)+'</span>'+
+      '<span>Profit if expiry at '+ks+'</span><span>'+sg(maxProf)+'</span>'+
+      '<span>Loss starts beyond</span><span>'+be(kb,ks,nd,X)+'</span>'+
+      '<span>Credit per ₹1 lakh margin</span><span>'+(v==null?'checking margin... (IV est ~₹'+rs(totCredit/estMg*100000)+')':'₹'+rs(v))+'</span>'+
+      '<span>Net delta</span><span>'+(dl==null?'–':fx(dl,2)+' ('+fx(dl*MUL,1)+' units)')+'</span>'+
+      '<span>IV buy / sell</span><span>'+fx(L[0].miv,1)+' / '+fx(L[1].miv,1)+'</span>'+
+      '</div>'+legsHtml({und:und,L:L,tags:tags,q:[1,-X],p:maxProf,estMg:estMg,estRaw:estRawD},MUL)+'</details>';
+  }
+
+  var cardsHtml=[];
+  res.forEach(function(r){
+    var base=r.e+"|"+r.X+"|"+r.gap+"|";
+    var wlAtm=wholeLots(r.X);
+    var sp=r.pairs.slice().sort(function(a,b){
+      var va=pl(a.nB,mgOf(a.L,a.X2),a.X2),vb=pl(b.nB,mgOf(b.L,b.X2),b.X2);
+      if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;return vb-va;
+    });
+    var s1Html=det(base+"s1","ATM",r.nA,r.k0,r.k1,r.X,r.gap,r.L,r.tags);
+    var laterList=[];
+    sp.forEach(function(p){
+      var h=det(base+p.kb+"|"+p.M,"",p.nB,p.kb,p.ks,p.X2,r.gap,p.L,p.tags);
+      if(h)laterList.push({html:h,v:pl(p.nB,mgOf(p.L,p.X2),p.X2)});
+    });
+    if(!s1Html&&!laterList.length)return;
+    var bestV=laterList.length&&laterList[0].v!=null?laterList[0].v:(pl(r.nA,mgOf(r.L,r.X),r.X));
+    var cardHead=expLabel(r.e)+' &bull; ATM: Buy '+lotTxt(wlAtm.buyL)+' '+r.k0+' '+optLbl+' / Sell '+lotTxt(wlAtm.sellL)+' '+r.k1+' '+optLbl+' &bull; Gap '+r.gap+' &bull; Ratio 1:'+r.X;
+    cardsHtml.push({
+      best:bestV!=null?bestV:-Infinity,
+      html:'<div class="c"><b>'+cardHead+'</b>'+
+        (bestV!=null?'<span class="tag" style="margin-left:6px">Best ₹'+rs(bestV)+'/lakh</span>':'')+
+        (s1Html?s1Html:'')+
+        laterList.slice(0,25).map(function(x){return x.html}).join("")+
+        (laterList.length>25?'<div class="sub" style="margin-top:4px">+'+(laterList.length-25)+' more passing rows</div>':'')+
+        '</div>'
+    });
+  });
+
+  cardsHtml.sort(function(a,b){return b.best-a.best});
+  if(HID||HIDU)msg.textContent=(HID?HID+" row(s) hidden (not above ₹"+rs(plk)+"/lakh). ":"")+(HIDU?HIDU+" row(s) checking margin in background...":"");
+  if(!cardsHtml.length){
+    if(!HIDU)msg.textContent=(msg.textContent+" No rows found strictly above ₹"+rs(plk)+"/lakh.").trim();
+    autoCheck();return;
+  }
+  out.innerHTML=cardsHtml.slice(0,20).map(function(x){return x.html}).join("");
+  autoCheck();
+}
+
+/* ============================================================================
+   TWO-STAGE TIER SCANNER:
+   Strictly scans ONLY checked/default expiries & renders aligned invisible columns
+   ============================================================================ */
+function extractCandidates(und,rows,spot){
+  var typ=val("typ"),optLbl=typ==="C"?"CE":"PE",dir=typ==="C"?1:-1;
+  var MUL=qtyMulFor(und),bLots=baseLots(),lsz=lotSizeFor(und),plk=num(val("plk"));
+  var candidates=[],seenKey={},kind=MODE==="R"?"R":"B",ci=calInfo(kind,und),cap=(plk!=null)?200:5;
+
+  function wholeLots(X){
+    var sc=scaleFactor([1,-X]);
+    return {sc:sc, buyL:Math.round(bLots*sc), sellL:Math.round(bLots*X*sc)};
+  }
+
+  if(MODE==="R"){
+    var g=function(i){return document.getElementById(i).value};
+    var M0=num(g("mx")),c1=g("c1"),c2=g("c2"),minInflow=num(g("s2lo")),xs=[],ms=[];
+    var XM=num(g("xm"))||7;
+    for(var x=1;x<=XM;x+=0.5)xs.push(x);
+    if(M0==null)ms=[1];else if(M0===0){for(var i=1;i<=10;i++)ms.push(i/10)}else if(M0>0)ms=[M0/100];
+    if(!spot){var f=rows.filter(function(r){return r.und===und&&r.spot!=null})[0];if(f)spot=f.spot}
+    if(!spot)return [];
+
+    var by={};rows.forEach(function(r){if(r.und===und&&r.type===typ&&expLive(r.exp)&&isExpSelected(r.exp)){(by[r.exp]=by[r.exp]||{})[r.k]=r}});
+    function ok(nd,c){return c==="any"||(c==="debit"?nd>0:nd<0)}
+    function inr(v,lo){return !(lo!=null&&v<lo)}
+
+    Object.keys(by).forEach(function(e){
+      var m=by[e],ks=Object.keys(m).map(Number).sort(function(a,b){return a-b});
+      if(!ks.length)return;
+      var k0=ks.reduce(function(p,k){return Math.abs(k-spot)<Math.abs(p-spot)?k:p},ks[0]);
+      var gaps=ks.map(function(k){return Math.round((k-k0)*dir*100)/100}).filter(function(d){return d>0});
+      gaps.forEach(function(gap){
+        var k1=Math.round((k0+dir*gap)*100)/100;if(!m[k1])return;
+        if(!withinSellDist(k1,spot))return;
+        var a=m[k0],b=m[k1];if(a.ask==null||b.bid==null)return;
+        xs.forEach(function(X){
+          var nA=a.ask-X*b.bid;
+          if(!ok(nA,c1))return;
+          ks.forEach(function(kb){
+            if((kb-k0)*dir<=0)return;
+            if(!withinBuyDist(kb,spot))return;
+            var kS=Math.round((kb+dir*gap)*100)/100;if(!m[kS])return;
+            if(!withinSellDist(kS,spot))return;
+            var p=m[kb],q=m[kS];if(p.ask==null||q.bid==null)return;
+            ms.forEach(function(M){
+              var X2=Math.floor(X*M*2+1e-9)/2;if(X2<=0)return;
+              var uKey=e+"|"+kb+"|"+kS+"|"+X2;
+              if(seenKey[uKey])return;
+              var nB=p.ask-X2*q.bid;
+              if(!ok(nB,c2)||!inr(-nB*MUL,minInflow))return;
+              var wl=wholeLots(X2);
+              var totCredit=-nB*MUL*wl.sc;
+              if(totCredit<=0)return;
+              seenKey[uKey]=1;
+              var legs=[1,-X2].map(function(mult,idx){return{s:[p,q][idx].sym,side:mult>0?1:-1,qty:Math.round(Math.abs(mult)*MUL*wl.sc)}});
+              var estRaw=estMarginRaw(und,spot,kb,kS,X2,MUL,wl.sc,p,q),estMg=estRaw*ci.med;
+              var exMg=MG[mkey(legs)];
+              var estPlk=totCredit/estMg*100000,optPlk=totCredit/(estRaw*ci.lo)*100000;
+              var exPlk=(exMg&&exMg.total>0)?(totCredit/exMg.total*100000):null;
+              var activePlk=exPlk!=null?exPlk:estPlk;
+              if(plk!=null&&(exPlk!=null?(exPlk<=plk):(optPlk<=plk)))return;
+
+              candidates.push({
+                id:und+"|"+uKey,und:und,e:e,spot:spot,optLbl:optLbl,
+                kb:kb,ks:kS,k0:k0,k1:k1,gap:gap,X:X2,atmX:X,nd:nB,
+                wl:wl,lsz:lsz,MUL:MUL,totCredit:totCredit,maxProf:(gap-nB)*MUL*wl.sc,
+                L:[p,q],tags:["Buy "+lotTxt(wl.buyL),"Sell "+lotTxt(wl.sellL)],q:[1,-X2],
+                legs:legs,estMg:estMg,estRaw:estRaw,optPlk:optPlk,estPlk:estPlk,exactPlk:exPlk,scorePlk:activePlk,dir:dir,
+                buyDistPct:(kb-spot)/spot*100,
+                sellDistPct:(kS-spot)/spot*100
+              });
+            });
+          });
+        });
+      });
+    });
+  } else {
+    var maxw=num(val("wid"))||1e9,minr=num(val("rat"))||0,clo=num(val("clo")),chi=num(val("chi"));
+    if(!spot){var f2=rows.filter(function(r){return r.und===und&&r.spot!=null})[0];if(f2)spot=f2.spot}
+    var byB={};rows.forEach(function(r){if(r.und===und&&r.type===typ&&expLive(r.exp)&&isExpSelected(r.exp)){(byB[r.exp]=byB[r.exp]||{})[r.k]=r}});
+    Object.keys(byB).forEach(function(e){
+      var ks=Object.keys(byB[e]).map(Number).sort(function(a,b){return a-b}),m=byB[e];
+      ks.forEach(function(k){
+        if(!withinSellDist(k,spot))return;
+        ks.forEach(function(lo){
+          if(lo>=k)return;var w=k-lo,hi=k+w;if(w>maxw||!m[hi])return;
+          if(!withinBuyDist(lo,spot)||!withinBuyDist(hi,spot))return;
+          var a=m[lo],b=m[k],c=m[hi];
+          if(a.ask==null||b.bid==null||c.ask==null||b.bid<=0)return;
+          var deb=a.ask-2*b.bid+c.ask,cash=-deb*MUL;if(deb>=w)return;
+          if(clo!=null&&cash<clo)return;if(chi!=null&&cash>chi)return;
+          var ratio=deb>0?(w-deb)/deb:Infinity;if(deb>0&&ratio<minr)return;
+          var legs=[1,-2,1].map(function(mult,i){return{s:[a,b,c][i].sym,side:mult>0?1:-1,qty:Math.round(Math.abs(mult)*MUL)}});
+          var maxProf=(w-deb)*MUL;
+          var estRaw=estMarginButterflyRaw(und,spot||k,w,MUL,b),estMg=estRaw*ci.med;
+          var exMg=MG[mkey(legs)];
+          var estPlk=maxProf/estMg*100000,optPlk=maxProf/(estRaw*ci.lo)*100000;
+          var exPlk=(exMg&&exMg.total>0)?(maxProf/exMg.total*100000):null;
+          var activePlk=exPlk!=null?exPlk:estPlk;
+          if(plk!=null&&(exPlk!=null?(exPlk<=plk):(optPlk<=plk)))return;
+          candidates.push({
+            id:und+"|"+e+"|"+lo+"|"+k+"|"+hi,isB:true,und:und,e:e,spot:spot,optLbl:optLbl,
+            lo:lo,k:k,hi:hi,w:w,deb:deb,cash:cash,ratio:ratio,maxProf:maxProf,MUL:MUL,bLots:bLots,
+            L:[a,b,c],tags:["Buy "+lotTxt(bLots),"Sell "+lotTxt(2*bLots),"Buy "+lotTxt(bLots)],q:[1,-2,1],
+            legs:legs,estMg:estMg,estRaw:estRaw,optPlk:optPlk,estPlk:estPlk,exactPlk:exPlk,scorePlk:activePlk,
+            sellDistPct:spot?((k-spot)/spot*100):null
+          });
+        });
+      });
+    });
+  }
+
+  candidates.sort(function(a,b){return b.scorePlk-a.scorePlk});
+  if(candidates.length>cap)DIAG.capped+=candidates.length-cap;
+  return candidates.slice(0,cap);
+}
+
+function renderTierLeaderboard(stageMsg){
+  var out=document.getElementById("out"),msg=document.getElementById("msg");
+  var plk=num(val("plk"));
+  function sg(n){return(n>0?"+":"")+n.toFixed(2)}
+  function be(k0,k1,nd,X,dir){return X>1?fx((X*k1-k0-dir*nd)/(X-1),0):"none"}
+
+  var visible=[];
+  var hiddenBelow=0;
+  TIER_ITEMS.forEach(function(item){
+    if(item.isB){
+      if(!withinSellDist(item.k,item.spot)||!withinBuyDist(item.lo,item.spot)||!withinBuyDist(item.hi,item.spot))return;
+    } else {
+      if(!withinSellDist(item.ks,item.spot)||!withinBuyDist(item.kb,item.spot))return;
+    }
+
+    var exMg=MG[mkey(item.legs)];
+    if(exMg&&exMg.total>0){
+      var metric=item.isB?item.maxProf:item.totCredit;
+      item.exactPlk=metric/exMg.total*100000;
+      item.scorePlk=item.exactPlk;
+    } else {
+      item.exactPlk=null;
+      item.scorePlk=item.estPlk;
+    }
+    if(plk!=null){
+      if(item.exactPlk!=null){
+        if(item.exactPlk<=plk){hiddenBelow++;return}
+      } else if(!TIER_BUSY && (item.optPlk!=null?item.optPlk:item.estPlk)<=plk){
+        hiddenBelow++;return;
+      }
+    }
+    visible.push(item);
+  });
+
+  visible.sort(function(a,b){
+    var aEx=a.exactPlk!=null?1:0, bEx=b.exactPlk!=null?1:0;
+    if(aEx!==bEx)return bEx-aEx;
+    return b.scorePlk-a.scorePlk;
+  });
+  var totalVis=visible.length;visible=visible.slice(0,150);
+
+  if(stageMsg!=null)msg.textContent=stageMsg+(hiddenBelow?" ("+hiddenBelow+" filtered out below ₹"+rs(plk)+"/lakh)":"");
+
+  if(!visible.length){
+    out.innerHTML=noteHtml()+'<div class="sub">No setups currently above target within your bought/sold strike % limits.</div>';
+    return;
+  }
+
+  var bdLim=minBuyDistFrac();
+  out.innerHTML=noteHtml()+'<div class="sub" style="margin-bottom:6px">Showing '+visible.length+(totalVis>visible.length?' of '+totalVis:'')+' setups across the scanned symbols (selling leg ≤ '+fx(maxSellDistFrac()*100,1)+'%'+(bdLim!=null?', bought leg ≥ '+fx(bdLim*100,1)+'%':'')+' from spot, ranked highest to lowest ₹/lakh):</div>'+
+  visible.map(function(r,idx){
+    var isExact=r.exactPlk!=null;
+    var badge=isExact
+      ?'<span class="tag">Exact ₹'+rs(r.exactPlk)+'/lakh</span>'
+      :'<span class="tag est">IV Est ~₹'+rs(r.estPlk)+'/lakh</span>';
+
+    if(r.isB){
+      var bSummary='<div class="srow">'+
+        '<span class="sym-badge">#'+(idx+1)+' '+r.und+'</span>'+
+        '<span class="sc">'+expLabel(r.e)+'</span>'+
+        '<span class="sc">Buy '+lotTxt(r.bLots)+' '+r.lo+'/'+r.hi+' '+r.optLbl+'</span>'+
+        '<span class="sc">Sell '+lotTxt(2*r.bLots)+' '+r.k+' '+r.optLbl+'</span>'+
+        '<span class="sc sc-muted">Gap '+r.w+'</span>'+
+        '<span class="sc">Ratio 1:2:1</span>'+
+        '<span class="sc">Credit '+sg(r.cash)+'</span>'+
+        '<span class="sc">'+badge+'</span>'+
+        '</div>';
+      return '<div class="c"><details data-k="'+r.id+'"'+(OPEN[r.id]?' open':'')+'><summary>'+bSummary+'</summary>'+
+        '<div class="g"><span>Max profit</span><span>'+sg(r.maxProf)+'</span><span>Profit/risk</span><span>'+(r.ratio===Infinity?'credit':fx(r.ratio))+'</span><span>Sold strike vs spot</span><span>'+(r.sellDistPct==null?'–':(r.sellDistPct>0?'+':'')+fx(r.sellDistPct,2)+'%')+'</span></div>'+
+        legsHtml({und:r.und,L:r.L,tags:r.tags,q:r.q,p:r.maxProf,estMg:r.estMg,estRaw:r.estRaw},r.MUL)+'</details></div>';
+    }
+
+    var wl=r.wl,ratioStr="1:"+r.X;
+    var summaryGrid='<div class="srow">'+
+      '<span class="sym-badge">#'+(idx+1)+' '+r.und+'</span>'+
+      '<span class="sc">'+expLabel(r.e)+'</span>'+
+      '<span class="sc">Buy '+lotTxt(wl.buyL)+' '+r.kb+' '+r.optLbl+'</span>'+
+      '<span class="sc">Sell '+lotTxt(wl.sellL)+' '+r.ks+' '+r.optLbl+'</span>'+
+      '<span class="sc sc-muted">Gap '+r.gap+'</span>'+
+      '<span class="sc">Ratio '+ratioStr+'</span>'+
+      '<span class="sc">Credit '+sg(r.totCredit)+'</span>'+
+      '<span class="sc">'+badge+'</span>'+
+      '</div>';
+    var dl=(r.L[0].d!=null&&r.L[1].d!=null)?(r.L[0].d-r.X*r.L[1].d)*wl.sc:null;
+
+    return '<div class="c">'+
+      '<details data-k="'+r.id+'"'+(OPEN[r.id]?' open':'')+'>'+
+      '<summary>'+summaryGrid+'</summary>'+
+      '<div class="g">'+
+      '<span>Underlying &amp; Spot</span><span>'+r.und+' (Spot '+fx(r.spot,2)+', ATM '+r.k0+', Lot size '+r.lsz+')</span>'+
+      '<span>Exact strikes &amp; lots</span><span>Buy '+lotTxt(wl.buyL)+' ('+rs(wl.buyL*r.lsz)+' qty) '+r.kb+' '+r.optLbl+' / Sell '+lotTxt(wl.sellL)+' ('+rs(wl.sellL*r.lsz)+' qty) '+r.ks+' '+r.optLbl+'</span>'+
+      '<span>Bought &amp; sold vs spot</span><span>Buy '+(r.buyDistPct>0?'+':'')+fx(r.buyDistPct,2)+'% &bull; Sell '+(r.sellDistPct>0?'+':'')+fx(r.sellDistPct,2)+'%</span>'+
+      '<span>Ratio &amp; gap</span><span>'+ratioStr+' ('+wl.buyL+':'+wl.sellL+') &bull; '+r.gap+' pts</span>'+
+      '<span>Net credit at traded lots</span><span>'+sg(r.totCredit)+'</span>'+
+      '<span>Profit if expiry at '+r.ks+'</span><span>'+sg(r.maxProf)+'</span>'+
+      '<span>Loss starts beyond</span><span>'+be(r.kb,r.ks,r.nd,r.X,r.dir)+'</span>'+
+      '<span>Credit per ₹1 lakh margin</span><span>'+(isExact?'₹'+rs(r.exactPlk)+' (Exact Fyers SPAN)':'~₹'+rs(r.estPlk)+' (IV-Adjusted Method B Estimate)')+'</span>'+
+      '<span>Net delta</span><span>'+(dl==null?'–':fx(dl,2)+' ('+fx(dl*r.MUL,1)+' units)')+'</span>'+
+      '<span>IV buy / sell</span><span>'+fx(r.L[0].miv,1)+' / '+fx(r.L[1].miv,1)+'</span>'+
+      '</div>'+legsHtml({und:r.und,L:r.L,tags:r.tags,q:r.q,p:r.maxProf,estMg:r.estMg,estRaw:r.estRaw},r.MUL)+'</details></div>';
+  }).join("");
+}
+
+var TIER_NOTE="",CHC={};
+function noteHtml(){return TIER_NOTE?'<div class="sub" style="margin-bottom:6px">'+TIER_NOTE+'</div>':''}
+function esc(x){return String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function ageTxt(t){var m=Math.round((Date.now()-t)/60000);return m<1?"under 1 min old":m+" min old"}
+function waitMargin(){var n=0;function go(){if(canMargin()||TIER_ABORT||n++>100)return Promise.resolve();return wait(1000).then(go)}return go()}
+/* One symbol: chain (and chosen extra expiries). Reuses data fetched in the last few minutes instead of spending requests again */
+function fetchSymbolRows(und,base){
+  var c=CHC[und];
+  if(c&&Date.now()-c.t<(mkt()?300000:3600000)&&c.stk===val("stk")){
+    var need=pick1W2M(c.ex).slice(1).filter(function(p){return isExpSelected(p.code)}).map(function(p){return p.code});
+    if(need.every(function(code){return c.codes.indexOf(code)>=0}))return Promise.resolve({rows:c.rows,spot:c.spot,t:c.t,cached:true});
+  }
+  return fyWait(base).then(function(j){
+    var ex=(j.data&&j.data.expiryData)||[];
+    if(!ex.length)return{rows:[],spot:null,empty:true};
+    var picked=pick1W2M(ex),parsed=chainRows(j,und,ex6(ex[0])),allRows=parsed.rows,spot=parsed.spot,codes=[ex6(ex[0])];
+    var extra=picked.slice(1).filter(function(p){return isExpSelected(p.code)}),sub=Promise.resolve();
+    extra.forEach(function(p){sub=sub.then(function(){return wait(gapMs())}).then(function(){
+      return fyWait(base+"&timestamp="+p.raw.expiry).then(function(j2){var r2=chainRows(j2,und,p.code);allRows=allRows.concat(r2.rows);spot=r2.spot||spot;codes.push(p.code)})})});
+    return sub.then(function(){var t=Date.now();CHC[und]={t:t,stk:val("stk"),ex:ex,codes:codes,rows:allRows,spot:spot};return{rows:allRows,spot:spot,t:t}});
+  });
+}
+function updDiag(){
+  var o=document.getElementById("diagOut");if(!o)return;
+  var L=[];
+  L.push("Plan limits: "+planLim().s+"/s, "+planLim().m+"/min, "+planLim().d+"/day (self-guard stops at "+guardMin()+"/min and "+guardDay()+"/day)");
+  L.push("Stage 1 counters: "+(DIAG.s1?JSON.stringify(DIAG.s1):"not run yet"));
+  L.push("Stage 2 counters: "+(DIAG.s2?JSON.stringify(DIAG.s2):"not run yet"));
+  L.push("Candidates not considered because of the per-symbol safety limit: "+DIAG.capped);
+  L.push("Ratio estimate: "+calSummary("R"));
+  L.push("Butterfly estimate: "+calSummary("B"));
+  L.push("Liquidity measured for "+Object.keys(LIQ).length+" symbols; chain cache holds "+Object.keys(CHC).length);
+  L.push("--- last chain reply (first 1200 characters) ---");L.push(DIAG.chain||"(none yet)");
+  L.push("--- last margin reply (first 800 characters) ---");L.push(DIAG.margin||"(none yet)");
+  o.textContent=L.join("\n");
+}
+function startTierScan(){
+  var st=document.getElementById("st"),msg=document.getElementById("msg"),btn=document.getElementById("scanTierBtn");
+  if(TIER_BUSY){TIER_ABORT=true;st.textContent="Stopping Tier scan...";return}
+  if(!val("fa")||!val("ft")){
+    st.textContent="Enter Fyers App ID and Access Token in Settings (click bookmark icon on the right).";
+    document.getElementById("drawer").classList.add("open");
+    document.getElementById("btnDrawer").classList.add("active");
+    document.body.classList.add("drawer-open");
+    return;
+  }
+  stop();
+  TIER_BUSY=true;TIER_ABORT=false;TIER_MODE=true;TIER_ITEMS=[];TIER_NOTE="";DIAG.capped=0;
+  var S1={ok:0,fail:0,empty:0,cached:0,first:"",auth:false,oldest:Date.now()};
+  var S2={tried:0,ok:0,fail:0,consec:0,first:"",pruned:0,auth:false,halt:false,dailyStop:false,limitHit:false,left:0};
+  DIAG.s1=S1;DIAG.s2=S2;
+  btn.textContent="Stop Tier Scan";msg.textContent="";document.getElementById("out").innerHTML="";
+  var plk=num(val("plk")),maxChecks=parseInt(val("mck"),10),kind=MODE==="B"?"B":"R";
+  if(!(maxChecks>0))maxChecks=Infinity;
+  var syms=getTierSymbols(),tierSel=document.getElementById("tier"),tierLbl=tierSel.options[tierSel.selectedIndex].text;
+  st.textContent="Preparing "+tierLbl+": loading the F&O symbol and lot list...";
+
+  function finish(){
+    var okN=TIER_ITEMS.filter(function(x){var m=MG[mkey(x.legs)];return m&&m.total>0}).length,parts=[];
+    parts.push("Fetched "+S1.ok+" of "+syms.length+" symbols"+(S1.fail?" ("+S1.fail+" failed; first: "+esc(S1.first)+")":"")+(S1.empty?"; "+S1.empty+" had no expiries":"")+"; data "+ageTxt(S1.oldest)+(S1.cached?" ("+S1.cached+" reused from the last few minutes)":""));
+    parts.push(TIER_ITEMS.length+" candidates passed the calibrated filter; "+okN+" checked with exact Fyers margin"+(S2.pruned?"; "+S2.pruned+" ruled out as the estimate improved":"")+(S2.fail?"; "+S2.fail+" margin errors (first: "+esc(S2.first)+")":""));
+    if(S1.auth)parts.push("Fyers rejected the token. Log in again, then rescan.");
+    if(S2.halt)parts.push("Margin checking stopped early: "+(S2.auth?"token rejected, log in again":(S2.dailyStop?"daily margin limit reached":"the margin service kept failing"))+". Rows not yet checked are tagged est.");
+    if(S2.limitHit)parts.push("Stopped at your limit of "+maxChecks+" exact checks: "+S2.left+" candidates left unchecked (raise the limit in Settings to check them)");
+    if(DIAG.capped)parts.push(DIAG.capped+" lower-ranked candidates were not considered (per-symbol safety limit)");
+    parts.push(calSummary(kind));
+    TIER_NOTE=parts.join(" \u2022 ");
+    var head=TIER_ABORT&&!S1.auth?"Tier scan stopped.":(S1.auth?"Scan stopped: token rejected.":(!TIER_ITEMS.length?(S1.ok===0?"Could not fetch any symbol (see the note above).":"No setups pass your filters among the "+S1.ok+" symbols fetched."):"Tier scan complete."));
+    renderTierLeaderboard(head);
+    st.textContent=head+" Updated "+new Date().toLocaleTimeString();
+    updDiag();
+  }
+
+  getMaster("NSE",false).catch(function(){return {}}).then(function(mstMap){
+    if(mstMap)Object.keys(mstMap).forEach(function(u){if(!LOTS[u])learnLot(u,mstMap[u].l,"master")});
+    syms=getTierSymbols();
+    var seq=Promise.resolve();
+    syms.forEach(function(und,idx){
+      seq=seq.then(function(){
+        if(TIER_ABORT)return;
+        return wait(idx===0?0:(planLim().m>100?150:1200)).then(function(){
+          if(TIER_ABORT)return;
+          st.textContent="Stage 1: scanning "+(idx+1)+"/"+syms.length+" \u2022 "+und+" (ok "+S1.ok+", failed "+S1.fail+")...";
+          var base="https://api-t1.fyers.in/data/options-chain-v3?symbol="+encodeURIComponent(fySym(und))+"&strikecount="+val("stk")+"&greeks=1";
+          return fetchSymbolRows(und,base).then(function(res){
+            if(res.empty){S1.empty++;return}
+            S1.ok++;if(res.cached)S1.cached++;if(res.t<S1.oldest)S1.oldest=res.t;
+            noteLiquidity(und,res.rows,res.spot);
+            var cands=extractCandidates(und,res.rows,res.spot);
+            if(cands.length){TIER_ITEMS=TIER_ITEMS.concat(cands);renderTierLeaderboard("Stage 1: "+TIER_ITEMS.length+" candidates so far ("+(idx+1)+"/"+syms.length+" scanned)...")}
+          }).catch(function(err){
+            S1.fail++;if(!S1.first)S1.first=und+": "+((err&&err.message)||"error");
+            if(err&&err.auth){S1.auth=true;TIER_ABORT=true;return}
+            if(err&&err.daily){TIER_ABORT=true;return}
+            if(err&&err.rate)return wait(5000);
+          });
+        });
+      });
+    });
+    return seq;
+  }).then(function(){
+    if(TIER_ABORT||!TIER_ITEMS.length)return;
+    var queue=TIER_ITEMS.slice().sort(function(a,b){return(b.optPlk||0)-(a.optPlk||0)});
+    var i=0;
+    function optNow(it){var lo=calInfo(it.isB?"B":"R",it.und).lo;return(it.isB?it.maxProf:it.totCredit)/(it.estRaw*lo)*100000}
+    function step(){
+      if(TIER_ABORT||S2.halt||i>=queue.length)return Promise.resolve();
+      if(S2.tried>=maxChecks){S2.limitHit=true;S2.left=queue.length-i;return Promise.resolve()}
+      var it=queue[i++],ex=MG[mkey(it.legs)];
+      if(ex&&Date.now()-ex.t<TTL)return step();
+      if(plk!=null&&it.estRaw>0&&optNow(it)<=plk){S2.pruned++;return step()}
+      if(MD.d===istDay()&&MD.n>=2000){S2.dailyStop=true;S2.halt=true;return Promise.resolve()}
+      return waitMargin().then(function(){
+        if(TIER_ABORT)return;
+        S2.tried++;
+        st.textContent="Stage 2: exact margin on "+S2.tried+" setups, "+(queue.length-i)+" still queued"+(S2.pruned?", "+S2.pruned+" ruled out":"")+"...";
+        return mfetch(it.legs,it.und,it.estRaw,it.isB?"B":"R").then(function(){
+          S2.ok++;S2.consec=0;if(S2.ok%3===0)renderTierLeaderboard();
+        }).catch(function(err){
+          S2.fail++;S2.consec++;if(!S2.first)S2.first=(err&&err.message)||"error";
+          if(err&&err.auth)S2.auth=true;
+          if(S2.consec>=5||S2.auth)S2.halt=true;
+        }).then(function(){return wait(350)});
+      }).then(step);
+    }
+    return step();
+  }).then(finish,function(err){
+    TIER_NOTE="Scan failed: "+esc((err&&err.message)||err);finish();
+  }).then(function(){
+    TIER_BUSY=false;btn.textContent="Scan Tier";
+  });
+}
+
+document.getElementById("scanTierBtn").addEventListener("click",startTierScan);
+
+/* Lazy-fetch an expiry if user checks it in Settings and its rows aren't loaded yet */
+function ensureCheckedExpiriesLoaded(){
+  var und=val("und").toUpperCase();
+  if(!und||!LAST_PICKED.length||!val("fa")||!val("ft"))return Promise.resolve();
+  var haveExp={};
+  ROWS.forEach(function(r){if(r.und===und)haveExp[r.exp]=1});
+  var missing=LAST_PICKED.filter(function(p){return isExpSelected(p.code)&&!haveExp[p.code]});
+  if(!missing.length)return Promise.resolve();
+  var base="https://api-t1.fyers.in/data/options-chain-v3?symbol="+encodeURIComponent(fySym(und))+"&strikecount="+val("stk")+"&greeks=1";
+  var seq=Promise.resolve();
+  document.getElementById("st").textContent="Fetching newly selected expiry...";
+  missing.forEach(function(p){
+    seq=seq.then(function(){return wait(250)}).then(function(){
+      return fy(base+"&timestamp="+p.raw.expiry).then(function(j2){
+        var r2=chainRows(j2,und,p.code);
+        ROWS=ROWS.concat(r2.rows);
+      });
+    });
+  });
+  return seq.then(function(){
+    document.getElementById("st").textContent=ROWS.length+" contracts loaded • Lot size "+lotSizeFor(und);
+  }).catch(function(){});
+}
+
+document.getElementById("out").addEventListener("toggle",function(e){var d=e.target;if(d.tagName==="DETAILS")OPEN[d.getAttribute("data-k")]=d.open},true);
+document.getElementById("expbox").addEventListener("change",function(e){
+  var c=e.target,k=c.getAttribute("data-e");
+  if(k){
+    EXPSEL[k]=c.checked;sv();
+    ensureCheckedExpiriesLoaded().then(function(){scan()});
+  }
+});
+document.getElementById("expbox").addEventListener("click",function(e){
+  var b=e.target.closest(".eb");if(!b)return;
+  var act=b.getAttribute("data-a");
+  Array.prototype.forEach.call(this.querySelectorAll("input[data-e]"),function(x){
+    var code=x.getAttribute("data-e");
+    var state = act==="all" ? true : (act==="def" ? (EXPMETA[code]?EXPMETA[code].def:true) : false);
+    x.checked=state;EXPSEL[code]=state;
+  });
+  sv();
+  ensureCheckedExpiriesLoaded().then(function(){scan()});
+});
+
+var DAY={d:"",n:0},MIN=[];
+function istDay(){return new Date(Date.now()+19800000).toISOString().slice(0,10)}
+try{var z=JSON.parse(localStorage.getItem("nse_day")||"{}");if(z.d===istDay())DAY=z}catch(e){}
+function perMin(){var t=Date.now();MIN=MIN.filter(function(x){return t-x<60000});return MIN.length}
+function showReq(){document.getElementById("rq").textContent="Requests: "+perMin()+"/min (limit "+planLim().m+"), "+DAY.n+"/day (limit "+planLim().d+"). Margin checks: "+MD.n+" today"}
+function logReq(){MIN.push(Date.now());if(DAY.d!==istDay())DAY={d:istDay(),n:0};DAY.n++;try{localStorage.setItem("nse_day",JSON.stringify(DAY))}catch(e){}showReq()}
+function mkt(){var d=new Date(Date.now()+19800000),w=d.getUTCDay(),m=d.getUTCHours()*60+d.getUTCMinutes();return w>0&&w<6&&m>=555&&m<=930}
+function wait(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function planLim(){var p=document.getElementById("plan");return p&&p.value==="prime"?{s:10,m:500,d:500000}:{s:5,m:50,d:5000}}
+function guardMin(){return Math.floor(planLim().m*0.84)}
+function guardDay(){return Math.floor(planLim().d*0.96)}
+function gapMs(){return Math.ceil(1000/planLim().s*1.4)}
+var DIAG={chain:"",margin:"",capped:0,s1:null,s2:null};
+function isAuthErr(m){return /could not authenticate|authenticat|token|unauthor|expired|\(code -(8|15|16)\)/i.test(m||"")}
+function fy(url){
+  var g0;
+  if(perMin()>=guardMin()){g0=new Error("Rate guard: "+guardMin()+" requests in the last minute.");g0.guard=true;return Promise.reject(g0)}
+  if(DAY.d===istDay()&&DAY.n>=guardDay()){g0=new Error("Rate guard: daily request limit reached ("+DAY.n+").");g0.guard=true;g0.daily=true;return Promise.reject(g0)}
+  logReq();
+  return fetch(url,{headers:{"Authorization":val("fa")+":"+val("ft")}}).then(function(r){return r.text().then(function(t){
+    DIAG.chain=String(t).slice(0,1200);
+    var j=loose(t),e;
+    if(r.status===429||(j&&(j.code===429||j.code===-429))){e=new Error("Fyers rate limit hit.");e.rate=true;throw e}
+    if(!j)throw new Error("Unreadable reply (HTTP "+r.status+")");
+    if(j.s!=="ok"&&j.code!==200){e=new Error((j.message||"error")+" (code "+j.code+")");e.auth=isAuthErr(e.message);throw e}
+    return j})});
+}
+/* Like fy(), but waits out the per-minute guard instead of failing, so symbols are never silently skipped */
+function fyWait(url){
+  var tries=0;
+  function go(){return fy(url).catch(function(err){if(err&&err.guard&&!err.daily&&tries++<45)return wait(1500).then(go);throw err})}
+  return go();
+}
+function load(){
+  var st=document.getElementById("st"),und=val("und").toUpperCase();
+  if(!und){
+    stop();
+    startTierScan();
+    return;
+  }
+  if(BUSY)return;
+  if(!val("fa")||!val("ft")){
+    st.textContent="Enter Fyers App ID and Access Token in Settings (click bookmark icon on the right).";
+    document.getElementById("drawer").classList.add("open");
+    document.getElementById("btnDrawer").classList.add("active");
+    document.body.classList.add("drawer-open");
+    stop();return;
+  }
+  BUSY=true;st.textContent="Fetching selected expiries for "+und+"...";
+  var base="https://api-t1.fyers.in/data/options-chain-v3?symbol="+encodeURIComponent(fySym(und))+"&strikecount="+val("stk")+"&greeks=1",all=[],spot=null;
+  fy(base).then(function(j){
+    var ex=(j.data&&j.data.expiryData)||[];
+    if(!ex.length)throw new Error("No expiries in reply");
+    var picked=pick1W2M(ex);
+    var r=chainRows(j,und,ex6(ex[0]));all=all.concat(r.rows);spot=r.spot||spot;
+    var seq=Promise.resolve();
+    picked.slice(1).filter(function(p){return isExpSelected(p.code)}).forEach(function(p){
+      seq=seq.then(function(){return wait(250)}).then(function(){return fy(base+"&timestamp="+p.raw.expiry)}).then(function(j2){
+        var r2=chainRows(j2,und,p.code);all=all.concat(r2.rows);spot=r2.spot||spot;
+      });
+    });
+    return seq;
+  }).then(function(){return ensureLot(und)}).then(function(){
+    ROWS=all;document.getElementById("inp").value="";
+    var tBadge="Tier "+getTierOf(und);
+    var lsz=lotSizeFor(und);
+    document.getElementById("fut").textContent=und+" ("+tBadge+") spot: "+(spot!=null?fx(spot,2):"–")+" • Auto lot size: "+lsz+" • Updated "+new Date().toLocaleTimeString();
+    scan();
+    st.textContent=all.length+" contracts loaded"+(mkt()?"":" • Market closed")+" • Lot size "+lsz;
+    if((!LOTS[und]||!LOTS[und].n)&&all.length)probeLot(und,all[0].sym);
+    BUSY=false;
+  }).catch(function(e){
+    var m=e.message;if(e instanceof TypeError)m="Could not reach Fyers.";
+    st.textContent="Fetch failed: "+m;BUSY=false;stop();
+  });
+}
+function stop(){LIVE=false;if(TMR)clearInterval(TMR);TMR=null;document.getElementById("live").textContent="Start live"}
+document.getElementById("live").addEventListener("click",function(){
+  if(!val("und")){startTierScan();return}
+  if(LIVE){stop();return}
+  LIVE=true;this.textContent="Stop live";
+  var n=parseInt(document.getElementById("ref").value,10);
+  load();
+  if(n>0)TMR=setInterval(load,n*1000);
+});
+/* ---- Fyers login: the Secret ID is never stored; the token is kept only until the next 6:30 AM IST ---- */
+var PEND_CODE=null;
+function flmsg(t){document.getElementById("flmsg").textContent=t}
+function nextTokenExpiry(){var n=new Date(),t=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),1,0,0);if(t<=n.getTime())t+=86400000;return t}
+function saveToken(tok){try{localStorage.setItem("bt_ft",tok);localStorage.setItem("bt_ft_exp",String(nextTokenExpiry()))}catch(e){}}
+function tokenAlive(){var e=0;try{e=parseInt(localStorage.getItem("bt_ft_exp")||"0",10)}catch(x){}return e>Date.now()}
+function dropToken(){try{localStorage.removeItem("bt_ft");localStorage.removeItem("bt_ft_exp")}catch(e){}document.getElementById("ft").value=""}
+function openDrawerNow(){document.getElementById("drawer").classList.add("open");document.getElementById("btnDrawer").classList.add("active");document.body.classList.add("drawer-open")}
+function sha256hex(x){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(x)).then(function(b){return Array.prototype.map.call(new Uint8Array(b),function(v){return("0"+v.toString(16)).slice(-2)}).join("")})}
+(function(){
+  var fa=document.getElementById("fa"),ft=document.getElementById("ft"),fr=document.getElementById("fr"),tok="";
+  try{fa.value=localStorage.getItem("bt_fa")||"";tok=localStorage.getItem("bt_ft")||""}catch(e){}
+  fa.addEventListener("input",function(){try{localStorage.setItem("bt_fa",fa.value.trim())}catch(e){}});
+  if(tok&&!localStorage.getItem("bt_ft_exp"))saveToken(tok);
+  if(tok&&tokenAlive())ft.value=tok;
+  else if(tok){dropToken();flmsg("Yesterday's token has expired. Log in again.")}
+  ft.addEventListener("input",function(){var v=ft.value.trim();if(v)saveToken(v);else dropToken()});
+  setInterval(function(){if(ft.value&&!tokenAlive()){dropToken();flmsg("The token expired at 6:30 AM. Log in again.")}},60000);
+  try{fr.value=localStorage.getItem("bt_fr")||new URL("api-test.html",location.href).href}catch(e){}
+  fr.addEventListener("input",function(){try{localStorage.setItem("bt_fr",fr.value.trim())}catch(e){}});
+  document.getElementById("flogin").addEventListener("click",function(){
+    var app=val("fa"),red=val("fr");
+    if(!app||!red){flmsg("Enter the App ID and the Redirect URL first.");return}
+    var st=Math.random().toString(36).slice(2);
+    try{localStorage.setItem("bt_state",st);localStorage.setItem("bt_return",location.origin+location.pathname)}catch(e){}
+    location.href="https://api-t1.fyers.in/api/v3/generate-authcode?client_id="+encodeURIComponent(app)+"&redirect_uri="+encodeURIComponent(red)+"&response_type=code&state="+st;
+  });
+  /* coming back from Fyers (directly, or relayed by api-test.html) */
+  var q=new URLSearchParams(location.search),code=q.get("auth_code");
+  if(code){
+    var ok=q.get("state")===localStorage.getItem("bt_state");
+    history.replaceState(null,"",location.pathname);
+    try{localStorage.removeItem("bt_return");localStorage.removeItem("bt_state")}catch(e){}
+    openDrawerNow();
+    if(!ok)flmsg("Login check failed (state did not match). Tap Log in again.");
+    else{PEND_CODE=code;document.getElementById("fsBox").style.display="block";flmsg("Login accepted. Type your Secret ID and tap Finish login. It is not saved.")}
+  }
+  document.getElementById("ffin").addEventListener("click",function(){
+    var box=document.getElementById("fs"),sec=box.value.trim(),app=val("fa");
+    box.value="";   /* wipe the Secret from the screen as soon as it is read */
+    if(!PEND_CODE){flmsg("No login in progress. Tap Log in to Fyers first.");return}
+    if(!sec||!app){flmsg("Enter the Secret ID (and the App ID).");return}
+    flmsg("Finishing login...");
+    sha256hex(app+":"+sec).then(function(hh){
+      return fetch("https://api-t1.fyers.in/api/v3/validate-authcode",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({grant_type:"authorization_code",appIdHash:hh,code:PEND_CODE})})
+    }).then(function(r){return r.text().then(function(t){
+      var j=loose(t);
+      if(j&&j.access_token){
+        ft.value=j.access_token;saveToken(j.access_token);PEND_CODE=null;
+        document.getElementById("fsBox").style.display="none";
+        flmsg("Token saved. It works until about 6:30 AM tomorrow. The Secret ID was not saved.");
+      }else flmsg("Fyers did not give a token ("+((j&&j.message)||("HTTP "+r.status))+"). Check the Secret ID, or tap Log in again if the login code expired.");
+    })}).catch(function(e){flmsg(e instanceof TypeError?"Could not reach Fyers (network or browser block).":"Error: "+e.message)});
+  });
+})();
+
+(function(){
+  var u1=document.getElementById("und");
+  function onUnd(v){
+    var u=v.trim().toUpperCase();
+    u1.value=u;
+    if(!u)return;
+    ensureLot(u);ROWS=[];LAST_PICKED=[];EXPSIG="";document.getElementById("out").innerHTML="";
+    if(LIVE)load();
+  }
+  u1.addEventListener("change",function(){onUnd(u1.value)});
+  try{
+    if(localStorage.getItem("sc_exp_fixed_v2")!=="1"){
+      EXPSEL={};
+      localStorage.removeItem("sc_exp");
+      localStorage.setItem("sc_exp_fixed_v2","1");
+    }
+    var savedPlk=localStorage.getItem("sc_plk");
+    if(savedPlk!=null){document.getElementById("plk").value=savedPlk}
+    var savedTier=localStorage.getItem("sc_tier");
+    if(savedTier){document.getElementById("tier").value=savedTier}
+    var savedPlan=localStorage.getItem("sc_plan");
+    if(savedPlan)document.getElementById("plan").value=savedPlan;
+    var savedBd=localStorage.getItem("sc_minbd");
+    if(savedBd!=null)document.getElementById("minbd").value=savedBd;
+    var savedSd=localStorage.getItem("sc_maxsd");
+    if(savedSd!=null&&savedSd!=="")document.getElementById("maxsd").value=savedSd;
+  }catch(e){}
+  populateSymbolDatalist();
+  ensureLot(val("und").toUpperCase());
+})();
+
+document.getElementById("refreshMst").addEventListener("click",function(){
+  var btn=this;btn.textContent="Refreshing...";
+  getMaster("NSE",true).then(function(){
+    btn.textContent="Refreshed!";
+    setTimeout(function(){btn.textContent="Refresh F&O list"},2000);
+  }).catch(function(e){
+    btn.textContent="Refresh F&O list";
+    document.getElementById("msg").textContent="Could not refresh master list: "+e.message;
+  });
+});
+
+document.getElementById("diagBox").addEventListener("toggle",updDiag);
+showReq();
+document.getElementById("go").addEventListener("click",function(){stop();scan()});
+
+function loadDepth(syms){
+  var seq=Promise.resolve();
+  syms.forEach(function(sy,i){seq=seq.then(function(){return i?wait(300):0}).then(function(){return fy("https://api-t1.fyers.in/data/depth?symbol="+encodeURIComponent(sy)+"&ohlcv_flag=1")}).then(function(j){
+    var x=(j.d||{})[sy]||{};function f(a){return(a||[]).slice(0,3).map(function(o){return{p:num(o.price),s:num(o.volume)}})}
+    DEPTH[sy]={b:f(x.bids),a:f(x.ask),t:"Top 3 fetched "+new Date().toLocaleTimeString()}})});
+  return seq;
+}
+function mfetch(legs,undOverride,rawEstMg,kind){
+  var key=mkey(legs),i,u=(undOverride||val("und")||"").toUpperCase();
+  for(i=0;i<legs.length;i++)if(Math.abs(legs[i].qty-Math.round(legs[i].qty))>1e-6)return Promise.reject(new Error("Quantity "+legs[i].qty+" is not a whole unit."));
+  var ord=legs.slice().sort(function(a,b){return b.side-a.side});
+  mgLog();showReq();
+  return fetch("https://api.fyers.in/api/v2/span_margin",{method:"POST",headers:{"Authorization":val("fa")+":"+val("ft"),"Content-Type":"application/json"},
+    body:JSON.stringify({data:ord.map(function(l){return{symbol:l.s,qty:Math.round(l.qty),side:l.side,type:2,productType:val("prd"),limitPrice:0.0,stopLoss:0.0}})})})
+  .then(function(r){return r.text().then(function(t){
+    var j=loose(t);DIAG.margin=String(t).slice(0,800);
+    if(!j)throw new Error("Unreadable reply (HTTP "+r.status+")");
+    if(j.s!=="ok"||!j.data){var ln=lotFrom(j),e2;if(ln&&u){learnLot(u,ln,"probe");e2=new Error("Lot size "+ln+" learned.");e2.learned=true;throw e2}var me=new Error((j.message||"error")+" (code "+j.code+")");me.auth=isAuthErr(me.message);throw me}
+    var tot=num(j.data.total);
+    MG[key]={t:Date.now(),total:tot,span:num(j.data.span),expo:num(j.data.expo),benefit:num(j.data.benefit)};
+    if(u&&tot>0&&rawEstMg&&rawEstMg>0)addCal(kind==="B"?"B":"R",u,tot/rawEstMg);
+    return MG[key];
+  })})
+  .catch(function(e){if(e instanceof TypeError)throw new Error("Could not reach Fyers margin service.");throw e});
+}
+document.getElementById("out").addEventListener("click",function(e){
+  var b=e.target.closest(".dp");
+  if(b){b.textContent="Loading...";loadDepth(b.getAttribute("data-s").split(",")).then(function(){if(TIER_MODE)renderTierLeaderboard();else scan()}).catch(function(err){b.textContent="Failed: "+err.message});return}
+  b=e.target.closest(".mgb");
+  if(b){
+    var u=b.getAttribute("data-u")||val("und");
+    var est=num(b.getAttribute("data-est"));
+    b.textContent="Checking...";
+    mfetch(JSON.parse(decodeURIComponent(b.getAttribute("data-m"))),u,est,b.getAttribute("data-kind")).then(function(){if(TIER_MODE)renderTierLeaderboard();else scan()}).catch(function(err){if(err.learned){if(TIER_MODE)renderTierLeaderboard();else scan()}else b.textContent="Failed: "+err.message});
+    return;
+  }
+});
+
+var MODE="R";
+function scan(){return MODE==="B"?scanB():scanR()}
+function setMode(m,init){
+  MODE=m;var g=function(i){return document.getElementById(i)};
+  g("pb").style.display=m==="B"?"":"none";g("pr").style.display=m==="R"?"":"none";
+  g("mode_q").value=m;
+  try{localStorage.setItem("sc_mode",m)}catch(e){}
+  if(!init){g("msg").textContent="";if(g("inp").value.trim()||ROWS.length)scan();else g("out").innerHTML=""}
+}
+var sm="R";try{sm=localStorage.getItem("sc_mode")==="B"?"B":"R"}catch(e){}
+setMode(sm,true);
+</script>
+</body>
+</html>
